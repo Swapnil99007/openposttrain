@@ -11,6 +11,7 @@ benchmark:
   name: gsm8k
   split: test
   limit: 3
+  prompt_path: prompts/gsm8k_v1.txt
 
 output:
   base_dir: results

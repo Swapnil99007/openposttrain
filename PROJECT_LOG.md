@@ -152,3 +152,25 @@ Add a better local instruction-tuned model for GSM8K evaluation.
 
 ### Next
 - Improve prompts and add prompt template versioning.
+
+## 2026-07-03
+
+### Goal
+Add prompt template versioning.
+
+### What I did
+- Added prompt templates under `prompts/`.
+- Added prompt loading utility.
+- Updated GSM8K evaluator to use external prompt templates.
+- Updated evaluation configs to include `prompt_path`.
+- Ran SmolLM2 with the stricter GSM8K prompt.
+
+### Results
+- Prompt versions are now tracked explicitly.
+- Evaluation summaries and leaderboard rows include the prompt path.
+
+### Issues
+- Prompt improvements may reduce formatting failures but cannot fix weak reasoning in very small models.
+
+### Next
+- Compare prompt versions more systematically using the leaderboard and failure types.

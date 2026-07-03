@@ -1,0 +1,8 @@
+Solve the following math problem step by step.
+
+At the end, write the final answer in this exact format:
+
+Final Answer: <number>
+
+Problem:
+{question}

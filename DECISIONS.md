@@ -176,3 +176,29 @@ SmolLM2-135M is still too small for strong GSM8K accuracy, but it is useful for 
 ### Status
 
 Accepted.
+
+## Decision 009: Version prompt templates as files
+
+### Decision
+
+Prompt templates will be stored as files under `prompts/` and selected from YAML configs.
+
+### Reason
+
+Prompt wording affects model outputs and benchmark results.
+
+Versioning prompts makes evaluation runs more reproducible and easier to compare.
+
+### Alternatives Considered
+
+- Keep prompts hardcoded in evaluator code.
+- Store prompts only inside YAML files.
+- Pass prompts through command-line arguments.
+
+### Tradeoff
+
+Prompt files add another project artifact, but they make prompt experiments cleaner.
+
+### Status
+
+Accepted.

@@ -1,7 +1,10 @@
 import re
 from dataclasses import dataclass
+
 from datasets import load_dataset
 from tqdm import tqdm
+
+from openposttrain.utils.prompts import format_prompt
 
 
 @dataclass
@@ -15,16 +18,25 @@ class EvalResult:
     failure_type: str
 
 
+def normalize_number(value: str) -> str:
+    value = str(value).strip().replace(",", "").replace("$", "")
+
+    if value.endswith(".0"):
+        value = value[:-2]
+
+    return value
+
+
 def extract_gsm8k_gold(answer: str) -> str:
     """
     GSM8K answers usually contain the final answer after ####.
     Example: '... #### 42'
     """
     if "####" in answer:
-        return answer.split("####")[-1].strip().replace(",", "")
+        return normalize_number(answer.split("####")[-1])
 
     numbers = re.findall(r"-?\d+\.?\d*", answer.replace(",", ""))
-    return numbers[-1] if numbers else ""
+    return normalize_number(numbers[-1]) if numbers else ""
 
 
 def extract_model_answer(response: str) -> str:
@@ -32,7 +44,7 @@ def extract_model_answer(response: str) -> str:
     Extract the number after 'Final Answer:' if present.
     Otherwise extract the last number from the response.
     """
-    cleaned_response = response.replace(",", "")
+    cleaned_response = response.replace(",", "").replace("$", "")
 
     final_answer_match = re.search(
         r"Final Answer:\s*(-?\d+\.?\d*)",
@@ -41,10 +53,10 @@ def extract_model_answer(response: str) -> str:
     )
 
     if final_answer_match:
-        return final_answer_match.group(1).strip()
+        return normalize_number(final_answer_match.group(1))
 
     numbers = re.findall(r"-?\d+\.?\d*", cleaned_response)
-    return numbers[-1] if numbers else ""
+    return normalize_number(numbers[-1]) if numbers else ""
 
 
 def classify_result(
@@ -64,21 +76,9 @@ def classify_result(
     return "wrong_numeric_answer"
 
 
-def build_prompt(question: str) -> str:
-    return f"""
-Solve the following math problem step by step.
-
-At the end, write the final answer in this exact format:
-
-Final Answer: <number>
-
-Problem:
-{question}
-""".strip()
-
-
 def run_gsm8k_eval(
     model,
+    prompt_template: str,
     split: str = "test",
     limit: int = 50,
     max_new_tokens: int = 256,
@@ -96,7 +96,7 @@ def run_gsm8k_eval(
         question = row["question"]
         gold_answer = row["answer"]
 
-        prompt = build_prompt(question)
+        prompt = format_prompt(prompt_template, question)
         model_answer = model.generate(
             prompt=prompt,
             max_new_tokens=max_new_tokens,

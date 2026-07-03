@@ -198,3 +198,23 @@ Purpose:
 - Move beyond smoke testing with tiny-gpt2
 - Test whether an instruction-tuned model follows the GSM8K prompt format
 - Compare failure behavior between non-instruction and instruction-tuned models
+
+## Prompt Template Versioning
+
+Prompt templates are stored as separate files under `prompts/`.
+
+Current GSM8K prompt templates:
+
+- prompts/gsm8k_v1.txt
+- prompts/gsm8k_v2_strict.txt
+
+Purpose:
+
+- Avoid hardcoding prompts inside evaluator code
+- Make prompt changes reproducible
+- Compare model behavior across prompt versions
+- Track whether stricter prompts reduce formatting failures
+
+Evaluation configs specify the prompt path using:
+
+    prompt_path: prompts/gsm8k_v2_strict.txt

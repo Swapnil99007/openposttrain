@@ -9,6 +9,7 @@ from openposttrain.models.hf_model import HFModel
 from openposttrain.evals.gsm8k import run_gsm8k_eval
 from openposttrain.utils.config import load_yaml_config
 from openposttrain.utils.leaderboard import append_to_leaderboard
+from openposttrain.utils.prompts import load_prompt_template
 
 
 def parse_args():
@@ -38,6 +39,9 @@ def main():
 
     model_name = model_config["name"]
     benchmark_name = benchmark_config["name"]
+    prompt_path = benchmark_config["prompt_path"]
+
+    prompt_template = load_prompt_template(prompt_path)
 
     model = HFModel(
         model_name=model_name,
@@ -48,6 +52,7 @@ def main():
 
     eval_output = eval_runner(
         model=model,
+        prompt_template=prompt_template,
         split=benchmark_config.get("split", "test"),
         limit=benchmark_config.get("limit"),
         max_new_tokens=model_config.get("max_new_tokens", 256),
@@ -77,6 +82,7 @@ def main():
         "max_new_tokens": model_config.get("max_new_tokens", 256),
         "temperature": model_config.get("temperature", 0.0),
         "top_p": model_config.get("top_p", 1.0),
+        "prompt_path": prompt_path,
         "config_path": args.config,
         "output_dir": output_dir,
     }

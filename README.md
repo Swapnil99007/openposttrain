@@ -135,3 +135,18 @@ This uses:
     HuggingFaceTB/SmolLM2-135M-Instruct
 
 This model is still small and not expected to be strong on GSM8K, but it is more useful than tiny-gpt2 for testing instruction following.
+
+## Prompt Templates
+
+Prompt templates are stored under:
+
+    prompts/
+
+Current GSM8K prompt templates:
+
+    prompts/gsm8k_v1.txt
+    prompts/gsm8k_v2_strict.txt
+
+Evaluation configs select a prompt with:
+
+    prompt_path: prompts/gsm8k_v2_strict.txt

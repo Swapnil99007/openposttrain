@@ -1,0 +1,12 @@
+You are solving a grade-school math word problem.
+
+Show the reasoning briefly.
+
+The final line must contain only the numeric answer in this exact format:
+
+Final Answer: <number>
+
+Do not include units, words, currency symbols, or explanations after the final answer.
+
+Problem:
+{question}
