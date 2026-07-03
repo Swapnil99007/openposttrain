@@ -162,3 +162,13 @@ To compare evaluation runs from the leaderboard:
 To compare failure categories across runs:
 
     python scripts/compare_failure_types.py --benchmark gsm8k
+
+## Clean Prompt Comparison
+
+To run SmolLM2 with GSM8K prompt v1:
+
+    PYTHONPATH=src python scripts/run_eval.py --config configs/eval_gsm8k_smollm2_135m_v1.yaml
+
+Then compare failure types:
+
+    python scripts/compare_failure_types.py --benchmark gsm8k

@@ -246,3 +246,11 @@ Purpose:
 - Read each run's results.csv
 - Count failure_type values
 - Compare model and prompt behavior across runs
+
+## Clean Prompt Comparison
+
+Prompt comparison should use the same model, benchmark, limit, and decoding settings.
+
+Only the prompt_path should change.
+
+This allows fair comparison between prompt versions.

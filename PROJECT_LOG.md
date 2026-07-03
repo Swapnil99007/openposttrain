@@ -207,3 +207,19 @@ Add failure-type comparison across runs.
 
 ### Next
 - Add a cleaner prompt comparison experiment with v1 vs v2 on the same model.
+
+## 2026-07-03
+
+### Goal
+Run clean prompt comparison for SmolLM2.
+
+### What I did
+- Added `configs/eval_gsm8k_smollm2_135m_v1.yaml`.
+- Ran SmolLM2 with GSM8K prompt v1.
+- Compared prompt v1 and prompt v2 strict using failure-type aggregation.
+
+### Results
+- Can now compare prompt versions with explicit prompt_path tracking.
+
+### Next
+- Add a prompt comparison summary script filtered by model.

@@ -230,3 +230,17 @@ When accuracy is low, failure categories provide more useful signal than accurac
 ### Status
 
 Accepted.
+
+## Decision 012: Compare prompts under controlled settings
+
+### Decision
+
+Prompt comparisons should hold model, benchmark, limit, and decoding settings constant.
+
+### Reason
+
+This isolates prompt wording as the variable being tested.
+
+### Status
+
+Accepted.
