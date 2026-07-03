@@ -1,0 +1,17 @@
+run_name: gsm8k_smollm2_135m_instruct_local
+
+model:
+  name: HuggingFaceTB/SmolLM2-135M-Instruct
+  max_new_tokens: 256
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 10
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

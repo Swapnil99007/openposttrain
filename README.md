@@ -123,3 +123,15 @@ For benchmark evaluation, deterministic generation is preferred, so temperature 
 To inspect the latest run for a benchmark:
 
     python scripts/inspect_latest_failures.py --benchmark gsm8k --limit 3
+
+## Run Small Instruction Model Locally
+
+To run GSM8K with a small instruction-tuned model:
+
+    PYTHONPATH=src python scripts/run_eval.py --config configs/eval_gsm8k_smollm2_135m.yaml
+
+This uses:
+
+    HuggingFaceTB/SmolLM2-135M-Instruct
+
+This model is still small and not expected to be strong on GSM8K, but it is more useful than tiny-gpt2 for testing instruction following.

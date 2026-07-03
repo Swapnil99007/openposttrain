@@ -131,3 +131,24 @@ Add a helper for inspecting the latest evaluation run.
 
 ### Next
 - Add support for running a slightly better tiny instruction model or API-based model wrapper.
+
+## 2026-07-03
+
+### Goal
+Add a better local instruction-tuned model for GSM8K evaluation.
+
+### What I did
+- Added `configs/eval_gsm8k_smollm2_135m.yaml`.
+- Ran GSM8K evaluation with `HuggingFaceTB/SmolLM2-135M-Instruct`.
+- Compared the run against the earlier tiny-gpt2 smoke test using `results/leaderboard.csv`.
+- Inspected failure examples with the latest-run helper.
+
+### Results
+- Added a local instruction-tuned model path for evaluation.
+- Leaderboard can now compare tiny-gpt2 and SmolLM2 runs.
+
+### Issues
+- SmolLM2-135M is still a small model and may not achieve high GSM8K accuracy.
+
+### Next
+- Improve prompts and add prompt template versioning.

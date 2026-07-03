@@ -150,3 +150,29 @@ The helper uses directory name sorting, which is simple but assumes timestamp-pr
 ### Status
 
 Accepted.
+
+## Decision 008: Add a small instruction-tuned local model
+
+### Decision
+
+Add `HuggingFaceTB/SmolLM2-135M-Instruct` as a local evaluation model.
+
+### Reason
+
+`sshleifer/tiny-gpt2` is useful only for smoke testing, but it cannot meaningfully follow instructions.
+
+A small instruction-tuned model allows local testing of prompt-following, answer formatting, and failure categories without downloading a multi-GB model.
+
+### Alternatives Considered
+
+- Continue using only tiny-gpt2.
+- Download Qwen2.5-1.5B locally.
+- Move immediately to RunPod.
+
+### Tradeoff
+
+SmolLM2-135M is still too small for strong GSM8K accuracy, but it is useful for local evaluator validation.
+
+### Status
+
+Accepted.

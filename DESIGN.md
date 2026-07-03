@@ -180,3 +180,21 @@ Purpose:
 - Avoid manually copying long results paths
 - Find the latest benchmark run automatically
 - Reuse the standard failure inspection script
+
+## Local Instruction Model Evaluation
+
+The project now supports evaluating a small instruction-tuned local model.
+
+Config:
+
+- configs/eval_gsm8k_smollm2_135m.yaml
+
+Model:
+
+- HuggingFaceTB/SmolLM2-135M-Instruct
+
+Purpose:
+
+- Move beyond smoke testing with tiny-gpt2
+- Test whether an instruction-tuned model follows the GSM8K prompt format
+- Compare failure behavior between non-instruction and instruction-tuned models
