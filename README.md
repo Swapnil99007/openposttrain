@@ -172,3 +172,9 @@ To run SmolLM2 with GSM8K prompt v1:
 Then compare failure types:
 
     python scripts/compare_failure_types.py --benchmark gsm8k
+
+## Compare Prompt Versions
+
+To compare prompt versions for a model:
+
+    python scripts/compare_prompts.py --benchmark gsm8k --model-name HuggingFaceTB/SmolLM2-135M-Instruct

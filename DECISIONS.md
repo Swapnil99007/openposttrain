@@ -244,3 +244,17 @@ This isolates prompt wording as the variable being tested.
 ### Status
 
 Accepted.
+
+## Decision 013: Add prompt comparison script
+
+### Decision
+
+Add a script to compare prompt versions for the same model and benchmark.
+
+### Reason
+
+Prompt experiments should be easy to compare without manually filtering the leaderboard.
+
+### Status
+
+Accepted.

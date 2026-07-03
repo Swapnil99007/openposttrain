@@ -223,3 +223,19 @@ Run clean prompt comparison for SmolLM2.
 
 ### Next
 - Add a prompt comparison summary script filtered by model.
+
+## 2026-07-03
+
+### Goal
+Add prompt comparison script.
+
+### What I did
+- Added `scripts/compare_prompts.py`.
+- The script filters runs by benchmark and model.
+- It compares prompt versions using accuracy and failure-type counts.
+
+### Results
+- Prompt comparisons are now easier and cleaner.
+
+### Next
+- Add a reusable experiment report generator.

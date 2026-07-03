@@ -254,3 +254,17 @@ Prompt comparison should use the same model, benchmark, limit, and decoding sett
 Only the prompt_path should change.
 
 This allows fair comparison between prompt versions.
+
+## Prompt Comparison Script
+
+The project includes a prompt comparison script.
+
+File:
+
+- scripts/compare_prompts.py
+
+Purpose:
+
+- Filter leaderboard rows by benchmark and model
+- Compare prompt_path values
+- Aggregate failure categories for each prompt version
