@@ -1,0 +1,101 @@
+import argparse
+import json
+import os
+from datetime import datetime
+
+import pandas as pd
+
+from openposttrain.models.hf_model import HFModel
+from openposttrain.evals.gsm8k import run_gsm8k_eval
+from openposttrain.utils.config import load_yaml_config
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run LLM evaluation from a YAML config.")
+    parser.add_argument(
+        "--config",
+        required=True,
+        help="Path to evaluation YAML config.",
+    )
+    return parser.parse_args()
+
+
+def get_eval_runner(benchmark_name: str):
+    if benchmark_name == "gsm8k":
+        return run_gsm8k_eval
+
+    raise ValueError(f"Unsupported benchmark: {benchmark_name}")
+
+
+def main():
+    args = parse_args()
+    config = load_yaml_config(args.config)
+
+    model_config = config["model"]
+    benchmark_config = config["benchmark"]
+    output_config = config["output"]
+
+    model_name = model_config["name"]
+    benchmark_name = benchmark_config["name"]
+
+    model = HFModel(
+        model_name=model_name,
+        device=model_config.get("device", "auto"),
+    )
+
+    eval_runner = get_eval_runner(benchmark_name)
+
+    eval_output = eval_runner(
+        model=model,
+        split=benchmark_config.get("split", "test"),
+        limit=benchmark_config.get("limit"),
+    )
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = config.get("run_name", f"{benchmark_name}_{timestamp}")
+
+    output_dir = os.path.join(
+        output_config.get("base_dir", "results"),
+        benchmark_name,
+        f"{timestamp}_{run_name}",
+    )
+    os.makedirs(output_dir, exist_ok=True)
+
+    summary = {
+        "run_name": run_name,
+        "model_name": model_name,
+        "benchmark": eval_output["benchmark"],
+        "split": eval_output["split"],
+        "limit": eval_output["limit"],
+        "accuracy": eval_output["accuracy"],
+        "num_examples": eval_output["num_examples"],
+        "config_path": args.config,
+    }
+
+    with open(f"{output_dir}/summary.json", "w") as f:
+        json.dump(summary, f, indent=2)
+
+    rows = []
+
+    for r in eval_output["results"]:
+        rows.append(
+            {
+                "question": r.question,
+                "gold_answer": r.gold_answer,
+                "model_answer": r.model_answer,
+                "extracted_gold": r.extracted_gold,
+                "extracted_model": r.extracted_model,
+                "is_correct": r.is_correct,
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    df.to_csv(f"{output_dir}/results.csv", index=False)
+
+    print("Evaluation complete.")
+    print(json.dumps(summary, indent=2))
+    print(f"Saved results to: {output_dir}")
+
+
+if __name__ == "__main__":
+    main()

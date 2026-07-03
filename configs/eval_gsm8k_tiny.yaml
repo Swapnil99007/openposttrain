@@ -1,0 +1,16 @@
+run_name: gsm8k_tiny_gpt2_smoke_test
+
+model:
+  name: sshleifer/tiny-gpt2
+  max_new_tokens: 256
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 3
+
+output:
+  base_dir: results
