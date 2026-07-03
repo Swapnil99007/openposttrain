@@ -1,0 +1,5 @@
+model_name: Qwen/Qwen2.5-1.5B-Instruct
+max_new_tokens: 256
+temperature: 0.0
+top_p: 1.0
+device: auto
