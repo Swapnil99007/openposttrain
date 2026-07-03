@@ -166,3 +166,17 @@ Purpose:
 - Compare how decoding settings affect benchmark performance
 
 For deterministic evaluation, temperature is usually set to 0.0.
+
+## Latest Run Inspection
+
+The project includes a helper script to inspect the most recent run for a benchmark.
+
+File:
+
+- scripts/inspect_latest_failures.py
+
+Purpose:
+
+- Avoid manually copying long results paths
+- Find the latest benchmark run automatically
+- Reuse the standard failure inspection script

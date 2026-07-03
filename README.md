@@ -117,3 +117,9 @@ Evaluation configs include generation parameters:
 These control how the model generates answers.
 
 For benchmark evaluation, deterministic generation is preferred, so temperature is usually set to 0.0.
+
+## Inspect Latest Failed Examples
+
+To inspect the latest run for a benchmark:
+
+    python scripts/inspect_latest_failures.py --benchmark gsm8k --limit 3

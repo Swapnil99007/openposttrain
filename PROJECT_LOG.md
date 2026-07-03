@@ -112,3 +112,22 @@ Make generation parameters configurable from YAML.
 
 ### Next
 - Add an automatic latest-run helper or result inspection by run directory.
+
+## 2026-07-03
+
+### Goal
+Add a helper for inspecting the latest evaluation run.
+
+### What I did
+- Added `scripts/inspect_latest_failures.py`.
+- The script finds the latest run directory for a benchmark.
+- It reuses `inspect_failures.py` to print failed examples.
+
+### Results
+- No need to manually copy long results.csv paths.
+
+### Issues
+- Latest run is determined by sorted directory name.
+
+### Next
+- Add support for running a slightly better tiny instruction model or API-based model wrapper.

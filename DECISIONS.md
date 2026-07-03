@@ -127,3 +127,26 @@ YAML config adds small overhead, but makes experiments easier to reproduce and c
 ### Status
 
 Accepted.
+
+## Decision 007: Add latest-run inspection helper
+
+### Decision
+
+Add a script that automatically finds the latest benchmark run and inspects its failures.
+
+### Reason
+
+Manual result paths are long and error-prone.
+
+### Alternatives Considered
+
+- Continue manually copying result paths.
+- Add a full dashboard immediately.
+
+### Tradeoff
+
+The helper uses directory name sorting, which is simple but assumes timestamp-prefixed run folders.
+
+### Status
+
+Accepted.
