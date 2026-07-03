@@ -82,3 +82,15 @@ This file tracks:
 - output directory
 
 The leaderboard is local-only for now because `results/` is ignored by Git.
+
+## Inspect Failed Examples
+
+After running an evaluation, inspect failed examples with:
+
+    python scripts/inspect_failures.py --results path/to/results.csv --limit 5
+
+Example:
+
+    python scripts/inspect_failures.py --results results/gsm8k/<run_dir>/results.csv --limit 3
+
+This helps identify whether failures come from model reasoning, prompt formatting, or answer extraction.

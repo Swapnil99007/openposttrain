@@ -50,3 +50,29 @@ A CSV file is less powerful than a full experiment tracker, but it keeps the ear
 ### Status
 
 Accepted.
+
+## Decision 004: Add failure inspection before adding more benchmarks
+
+### Decision
+
+Add a lightweight failure inspection script before expanding to more benchmarks.
+
+### Reason
+
+Aggregate metrics such as accuracy do not show why a model failed.
+
+Inspecting failures helps distinguish between model mistakes, prompt issues, and answer extraction bugs.
+
+### Alternatives Considered
+
+- Only rely on leaderboard metrics.
+- Add more benchmarks first.
+- Use a dashboard immediately.
+
+### Tradeoff
+
+This adds another small script, but improves debugging and evaluation quality.
+
+### Status
+
+Accepted.

@@ -114,3 +114,20 @@ Current leaderboard fields:
 - output_dir
 
 The leaderboard is currently stored under results/ and is not committed to GitHub.
+
+## Failure Inspection
+
+The project includes a result inspection script for analyzing incorrect examples.
+
+File:
+
+- scripts/inspect_failures.py
+
+Purpose:
+
+- Load a per-run results.csv file
+- Count passed and failed examples
+- Print failed examples in a readable format
+- Help diagnose model failures, prompt issues, and answer extraction errors
+
+This is important because aggregate metrics alone do not explain why a model failed.

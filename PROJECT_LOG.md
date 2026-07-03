@@ -52,3 +52,23 @@ Add a simple leaderboard for evaluation runs.
 
 ### Next
 - Add a reusable result inspection script to print wrong examples.
+
+## 2026-07-03
+
+### Goal
+Add a failure inspection utility for evaluation results.
+
+### What I did
+- Added `scripts/inspect_failures.py`.
+- The script reads a per-run `results.csv`.
+- It reports total examples, passed examples, failed examples, and accuracy.
+- It prints failed examples with question, gold answer, extracted model answer, and full model response.
+
+### Results
+- Can now inspect model failures from any evaluation run.
+
+### Issues
+- tiny-gpt2 failures are expected and not meaningful for quality analysis.
+
+### Next
+- Add cleaner error categorization for GSM8K failures.
