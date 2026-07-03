@@ -12,11 +12,12 @@ class EvalResult:
     extracted_gold: str
     extracted_model: str
     is_correct: bool
+    failure_type: str
 
 
 def extract_gsm8k_gold(answer: str) -> str:
     """
-    GSM8K answers usually contain final answer after ####.
+    GSM8K answers usually contain the final answer after ####.
     Example: '... #### 42'
     """
     if "####" in answer:
@@ -31,17 +32,36 @@ def extract_model_answer(response: str) -> str:
     Extract the number after 'Final Answer:' if present.
     Otherwise extract the last number from the response.
     """
+    cleaned_response = response.replace(",", "")
+
     final_answer_match = re.search(
         r"Final Answer:\s*(-?\d+\.?\d*)",
-        response.replace(",", ""),
+        cleaned_response,
         re.IGNORECASE,
     )
 
     if final_answer_match:
         return final_answer_match.group(1).strip()
 
-    numbers = re.findall(r"-?\d+\.?\d*", response.replace(",", ""))
+    numbers = re.findall(r"-?\d+\.?\d*", cleaned_response)
     return numbers[-1] if numbers else ""
+
+
+def classify_result(
+    extracted_gold: str,
+    extracted_model: str,
+    model_answer: str,
+) -> str:
+    if extracted_gold == extracted_model:
+        return "correct"
+
+    if not extracted_model:
+        return "no_numeric_answer"
+
+    if "final answer" not in model_answer.lower():
+        return "format_violation"
+
+    return "wrong_numeric_answer"
 
 
 def build_prompt(question: str) -> str:
@@ -57,7 +77,7 @@ Problem:
 """.strip()
 
 
-def run_gsm8k_eval(model, split: str = "test", limit: int = 3):
+def run_gsm8k_eval(model, split: str = "test", limit: int = 50):
     dataset = load_dataset("openai/gsm8k", "main", split=split)
 
     if limit:
@@ -76,6 +96,11 @@ def run_gsm8k_eval(model, split: str = "test", limit: int = 3):
         extracted_model = extract_model_answer(model_answer)
 
         is_correct = extracted_gold == extracted_model
+        failure_type = classify_result(
+            extracted_gold=extracted_gold,
+            extracted_model=extracted_model,
+            model_answer=model_answer,
+        )
 
         results.append(
             EvalResult(
@@ -85,6 +110,7 @@ def run_gsm8k_eval(model, split: str = "test", limit: int = 3):
                 extracted_gold=extracted_gold,
                 extracted_model=extracted_model,
                 is_correct=is_correct,
+                failure_type=failure_type,
             )
         )
 

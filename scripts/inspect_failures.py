@@ -21,7 +21,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    df = pd.read_csv(args.results)
+    df = pd.read_csv(args.results).fillna("")
 
     failed_df = df[df["is_correct"] == False]
 
@@ -36,6 +36,12 @@ def main():
     print(f"Passed: {passed}")
     print(f"Failed: {failed}")
     print(f"Accuracy: {passed / total if total else 0:.4f}")
+
+    if "failure_type" in df.columns:
+        print()
+        print("Failure types:")
+        print(df["failure_type"].value_counts().to_string())
+
     print("=" * 80)
 
     for idx, row in failed_df.head(args.limit).iterrows():
@@ -43,6 +49,10 @@ def main():
         print("-" * 80)
         print(f"Example index: {idx}")
         print("-" * 80)
+
+        if "failure_type" in row:
+            print("\nFailure type:")
+            print(row["failure_type"])
 
         print("\nQuestion:")
         print(row["question"])

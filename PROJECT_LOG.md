@@ -72,3 +72,23 @@ Add a failure inspection utility for evaluation results.
 
 ### Next
 - Add cleaner error categorization for GSM8K failures.
+
+## 2026-07-03
+
+### Goal
+Add simple GSM8K failure categorization.
+
+### What I did
+- Added `failure_type` to GSM8K evaluation results.
+- Updated `run_eval.py` to write failure types into results.csv.
+- Updated `inspect_failures.py` to show failure type counts.
+- Fixed empty extracted answers showing as pandas NaN during inspection.
+
+### Results
+- Failure inspection now shows both aggregate accuracy and failure categories.
+
+### Issues
+- Current categories are heuristic-based and may need refinement for stronger models.
+
+### Next
+- Add configurable generation parameters from YAML into model.generate.

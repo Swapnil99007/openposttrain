@@ -131,3 +131,20 @@ Purpose:
 - Help diagnose model failures, prompt issues, and answer extraction errors
 
 This is important because aggregate metrics alone do not explain why a model failed.
+
+## GSM8K Failure Categorization
+
+The GSM8K evaluator assigns a failure type to each example.
+
+Current categories:
+
+- correct
+- no_numeric_answer
+- format_violation
+- wrong_numeric_answer
+
+Purpose:
+
+- Separate reasoning failures from formatting failures
+- Diagnose answer extraction problems
+- Improve evaluation quality beyond aggregate accuracy

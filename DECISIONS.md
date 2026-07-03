@@ -76,3 +76,29 @@ This adds another small script, but improves debugging and evaluation quality.
 ### Status
 
 Accepted.
+
+## Decision 005: Add simple GSM8K failure categories
+
+### Decision
+
+Each GSM8K result will include a `failure_type`.
+
+### Reason
+
+Accuracy alone does not explain model behavior.
+
+Failure categories help identify whether the problem is missing numeric output, bad formatting, or wrong reasoning.
+
+### Alternatives Considered
+
+- Keep only `is_correct`.
+- Manually inspect all failures.
+- Add a full error taxonomy immediately.
+
+### Tradeoff
+
+The categories are simple and heuristic-based, but they are useful enough for early debugging.
+
+### Status
+
+Accepted.

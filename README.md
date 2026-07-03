@@ -94,3 +94,14 @@ Example:
     python scripts/inspect_failures.py --results results/gsm8k/<run_dir>/results.csv --limit 3
 
 This helps identify whether failures come from model reasoning, prompt formatting, or answer extraction.
+
+## GSM8K Failure Types
+
+The GSM8K evaluator records a `failure_type` for each example:
+
+- `correct`
+- `no_numeric_answer`
+- `format_violation`
+- `wrong_numeric_answer`
+
+These categories make it easier to understand why a model failed.

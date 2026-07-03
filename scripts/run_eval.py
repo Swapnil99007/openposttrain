@@ -89,6 +89,7 @@ def main():
                 "extracted_gold": r.extracted_gold,
                 "extracted_model": r.extracted_model,
                 "is_correct": r.is_correct,
+                "failure_type": r.failure_type,
             }
         )
 
