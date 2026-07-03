@@ -27,3 +27,28 @@ Build the first working evaluation pipeline for OpenPostTrain.
 - Add YAML config loading so model and benchmark settings are not hardcoded.
 - Add leaderboard.csv to compare runs.
 - Later run real models on RunPod or external model cache.
+
+## 2026-07-03
+
+### Goal
+Add a simple leaderboard for evaluation runs.
+
+### What I did
+- Added `src/openposttrain/utils/leaderboard.py`.
+- Updated `scripts/run_eval.py` to append each run summary to `results/leaderboard.csv`.
+- Added `leaderboard_path` to the GSM8K tiny config.
+- Documented leaderboard tracking in DESIGN.md.
+- Added a decision record for using a local CSV leaderboard.
+- Updated README with leaderboard behavior.
+
+### Results
+- Each evaluation run now saves:
+  - per-run `summary.json`
+  - per-run `results.csv`
+  - global `results/leaderboard.csv`
+
+### Issues
+- Leaderboard is local-only because `results/` is ignored by Git.
+
+### Next
+- Add a reusable result inspection script to print wrong examples.

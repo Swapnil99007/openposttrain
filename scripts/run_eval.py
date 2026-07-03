@@ -8,6 +8,7 @@ import pandas as pd
 from openposttrain.models.hf_model import HFModel
 from openposttrain.evals.gsm8k import run_gsm8k_eval
 from openposttrain.utils.config import load_yaml_config
+from openposttrain.utils.leaderboard import append_to_leaderboard
 
 
 def parse_args():
@@ -62,6 +63,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     summary = {
+        "timestamp": timestamp,
         "run_name": run_name,
         "model_name": model_name,
         "benchmark": eval_output["benchmark"],
@@ -70,6 +72,7 @@ def main():
         "accuracy": eval_output["accuracy"],
         "num_examples": eval_output["num_examples"],
         "config_path": args.config,
+        "output_dir": output_dir,
     }
 
     with open(f"{output_dir}/summary.json", "w") as f:
@@ -92,9 +95,20 @@ def main():
     df = pd.DataFrame(rows)
     df.to_csv(f"{output_dir}/results.csv", index=False)
 
+    leaderboard_path = output_config.get(
+        "leaderboard_path",
+        os.path.join(output_config.get("base_dir", "results"), "leaderboard.csv"),
+    )
+
+    append_to_leaderboard(
+        leaderboard_path=leaderboard_path,
+        row=summary,
+    )
+
     print("Evaluation complete.")
     print(json.dumps(summary, indent=2))
     print(f"Saved results to: {output_dir}")
+    print(f"Updated leaderboard: {leaderboard_path}")
 
 
 if __name__ == "__main__":

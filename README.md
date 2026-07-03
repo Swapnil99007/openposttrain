@@ -64,3 +64,21 @@ summary.json + results.csv
 sshleifer/tiny-gpt2 is only used for smoke testing. It is not expected to achieve meaningful accuracy.
 
 Real evaluations will use stronger models such as Qwen or Llama on RunPod or external model storage.
+
+## Leaderboard
+
+Each evaluation run appends a summary row to:
+
+    results/leaderboard.csv
+
+This file tracks:
+
+- model name
+- benchmark
+- split
+- number of examples
+- accuracy
+- config path
+- output directory
+
+The leaderboard is local-only for now because `results/` is ignored by Git.

@@ -14,3 +14,4 @@ benchmark:
 
 output:
   base_dir: results
+  leaderboard_path: results/leaderboard.csv

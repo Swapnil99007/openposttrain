@@ -85,3 +85,32 @@ Purpose:
 - Only GSM8K is supported.
 - Local smoke tests use sshleifer/tiny-gpt2.
 - Real model evaluation will be moved to RunPod or external model cache.
+
+## Leaderboard Tracking
+
+The evaluation runner appends each completed evaluation run to a local leaderboard file.
+
+Default path:
+
+- results/leaderboard.csv
+
+Purpose:
+
+- Track model performance across runs
+- Compare models and benchmarks
+- Provide a lightweight experiment history before adding MLflow or W&B
+
+Current leaderboard fields:
+
+- timestamp
+- run_name
+- model_name
+- benchmark
+- split
+- limit
+- accuracy
+- num_examples
+- config_path
+- output_dir
+
+The leaderboard is currently stored under results/ and is not committed to GitHub.
