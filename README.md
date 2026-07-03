@@ -178,3 +178,9 @@ Then compare failure types:
 To compare prompt versions for a model:
 
     python scripts/compare_prompts.py --benchmark gsm8k --model-name HuggingFaceTB/SmolLM2-135M-Instruct
+
+## Generate Experiment Report
+
+To generate a markdown report for GSM8K:
+
+    python scripts/generate_experiment_report.py --benchmark gsm8k --output reports/gsm8k_report.md

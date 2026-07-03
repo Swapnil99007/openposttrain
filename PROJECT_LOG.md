@@ -239,3 +239,19 @@ Add prompt comparison script.
 
 ### Next
 - Add a reusable experiment report generator.
+
+## 2026-07-03
+
+### Goal
+Add experiment report generation.
+
+### What I did
+- Added `scripts/generate_experiment_report.py`.
+- Generated a markdown report from leaderboard and failure-type data.
+- Added `tabulate` for markdown table support.
+
+### Results
+- GSM8K runs can now be summarized in `reports/gsm8k_report.md`.
+
+### Next
+- Start preparing for actual post-training data generation.

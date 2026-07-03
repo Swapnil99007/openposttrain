@@ -268,3 +268,17 @@ Purpose:
 - Filter leaderboard rows by benchmark and model
 - Compare prompt_path values
 - Aggregate failure categories for each prompt version
+
+## Experiment Report Generation
+
+The project includes a markdown report generator.
+
+File:
+
+- scripts/generate_experiment_report.py
+
+Purpose:
+
+- Summarize leaderboard runs
+- Aggregate failure categories
+- Produce a shareable experiment report under reports/

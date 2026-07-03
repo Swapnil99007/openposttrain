@@ -258,3 +258,17 @@ Prompt experiments should be easy to compare without manually filtering the lead
 ### Status
 
 Accepted.
+
+## Decision 014: Generate markdown experiment reports
+
+### Decision
+
+Add markdown report generation from local experiment data.
+
+### Reason
+
+Reports make project progress easier to review, share, and explain in interviews.
+
+### Status
+
+Accepted.
