@@ -232,3 +232,17 @@ Purpose:
 - Read results/leaderboard.csv
 - Filter by benchmark
 - Compare models, prompts, decoding settings, and accuracy
+
+## Failure-Type Comparison
+
+The project includes a script to aggregate failure categories across evaluation runs.
+
+File:
+
+- scripts/compare_failure_types.py
+
+Purpose:
+
+- Read each run's results.csv
+- Count failure_type values
+- Compare model and prompt behavior across runs

@@ -216,3 +216,17 @@ As more models and prompts are tested, manually reading leaderboard rows becomes
 ### Status
 
 Accepted.
+
+## Decision 011: Compare failure types across runs
+
+### Decision
+
+Add a script that aggregates failure_type counts across evaluation runs.
+
+### Reason
+
+When accuracy is low, failure categories provide more useful signal than accuracy alone.
+
+### Status
+
+Accepted.

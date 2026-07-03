@@ -190,3 +190,20 @@ Add a simple run comparison utility.
 
 ### Next
 - Add failure-type aggregation across runs.
+
+## 2026-07-03
+
+### Goal
+Add failure-type comparison across runs.
+
+### What I did
+- Added `scripts/compare_failure_types.py`.
+- The script reads the leaderboard.
+- For each run, it loads the corresponding results.csv.
+- It aggregates failure_type counts.
+
+### Results
+- Can now compare not only accuracy, but also failure behavior across models and prompts.
+
+### Next
+- Add a cleaner prompt comparison experiment with v1 vs v2 on the same model.

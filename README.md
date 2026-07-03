@@ -156,3 +156,9 @@ Evaluation configs select a prompt with:
 To compare evaluation runs from the leaderboard:
 
     python scripts/compare_runs.py --benchmark gsm8k
+
+## Compare Failure Types
+
+To compare failure categories across runs:
+
+    python scripts/compare_failure_types.py --benchmark gsm8k
