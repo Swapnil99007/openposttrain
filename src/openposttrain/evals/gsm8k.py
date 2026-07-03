@@ -1,0 +1,100 @@
+import re
+from dataclasses import dataclass
+from datasets import load_dataset
+from tqdm import tqdm
+
+
+@dataclass
+class EvalResult:
+    question: str
+    gold_answer: str
+    model_answer: str
+    extracted_gold: str
+    extracted_model: str
+    is_correct: bool
+
+
+def extract_gsm8k_gold(answer: str) -> str:
+    """
+    GSM8K answers usually contain final answer after ####.
+    Example: '... #### 42'
+    """
+    if "####" in answer:
+        return answer.split("####")[-1].strip().replace(",", "")
+
+    numbers = re.findall(r"-?\d+\.?\d*", answer.replace(",", ""))
+    return numbers[-1] if numbers else ""
+
+
+def extract_model_answer(response: str) -> str:
+    """
+    Extract the number after 'Final Answer:' if present.
+    Otherwise extract the last number from the response.
+    """
+    final_answer_match = re.search(
+        r"Final Answer:\s*(-?\d+\.?\d*)",
+        response.replace(",", ""),
+        re.IGNORECASE,
+    )
+
+    if final_answer_match:
+        return final_answer_match.group(1).strip()
+
+    numbers = re.findall(r"-?\d+\.?\d*", response.replace(",", ""))
+    return numbers[-1] if numbers else ""
+
+
+def build_prompt(question: str) -> str:
+    return f"""
+Solve the following math problem step by step.
+
+At the end, write the final answer in this exact format:
+
+Final Answer: <number>
+
+Problem:
+{question}
+""".strip()
+
+
+def run_gsm8k_eval(model, split: str = "test", limit: int = 3):
+    dataset = load_dataset("openai/gsm8k", "main", split=split)
+
+    if limit:
+        dataset = dataset.select(range(min(limit, len(dataset))))
+
+    results = []
+
+    for row in tqdm(dataset, desc="Evaluating GSM8K"):
+        question = row["question"]
+        gold_answer = row["answer"]
+
+        prompt = build_prompt(question)
+        model_answer = model.generate(prompt)
+
+        extracted_gold = extract_gsm8k_gold(gold_answer)
+        extracted_model = extract_model_answer(model_answer)
+
+        is_correct = extracted_gold == extracted_model
+
+        results.append(
+            EvalResult(
+                question=question,
+                gold_answer=gold_answer,
+                model_answer=model_answer,
+                extracted_gold=extracted_gold,
+                extracted_model=extracted_model,
+                is_correct=is_correct,
+            )
+        )
+
+    accuracy = sum(r.is_correct for r in results) / len(results)
+
+    return {
+        "benchmark": "gsm8k",
+        "split": split,
+        "limit": limit,
+        "accuracy": accuracy,
+        "num_examples": len(results),
+        "results": results,
+    }
