@@ -202,3 +202,17 @@ Prompt files add another project artifact, but they make prompt experiments clea
 ### Status
 
 Accepted.
+
+## Decision 010: Add simple leaderboard comparison script
+
+### Decision
+
+Add a script to compare evaluation runs from the local leaderboard.
+
+### Reason
+
+As more models and prompts are tested, manually reading leaderboard rows becomes inconvenient.
+
+### Status
+
+Accepted.

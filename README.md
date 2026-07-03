@@ -150,3 +150,9 @@ Current GSM8K prompt templates:
 Evaluation configs select a prompt with:
 
     prompt_path: prompts/gsm8k_v2_strict.txt
+
+## Compare Runs
+
+To compare evaluation runs from the leaderboard:
+
+    python scripts/compare_runs.py --benchmark gsm8k

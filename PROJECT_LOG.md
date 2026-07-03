@@ -174,3 +174,19 @@ Add prompt template versioning.
 
 ### Next
 - Compare prompt versions more systematically using the leaderboard and failure types.
+
+## 2026-07-03
+
+### Goal
+Add a simple run comparison utility.
+
+### What I did
+- Added `scripts/compare_runs.py`.
+- The script reads `results/leaderboard.csv`.
+- It can filter runs by benchmark.
+
+### Results
+- Evaluation runs can now be compared from one command.
+
+### Next
+- Add failure-type aggregation across runs.

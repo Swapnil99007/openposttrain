@@ -218,3 +218,17 @@ Purpose:
 Evaluation configs specify the prompt path using:
 
     prompt_path: prompts/gsm8k_v2_strict.txt
+
+## Run Comparison
+
+The project includes a lightweight leaderboard comparison script.
+
+File:
+
+- scripts/compare_runs.py
+
+Purpose:
+
+- Read results/leaderboard.csv
+- Filter by benchmark
+- Compare models, prompts, decoding settings, and accuracy
