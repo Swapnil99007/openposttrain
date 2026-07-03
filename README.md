@@ -105,3 +105,15 @@ The GSM8K evaluator records a `failure_type` for each example:
 - `wrong_numeric_answer`
 
 These categories make it easier to understand why a model failed.
+
+## Generation Settings
+
+Evaluation configs include generation parameters:
+
+    max_new_tokens: 256
+    temperature: 0.0
+    top_p: 1.0
+
+These control how the model generates answers.
+
+For benchmark evaluation, deterministic generation is preferred, so temperature is usually set to 0.0.

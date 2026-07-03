@@ -92,3 +92,23 @@ Add simple GSM8K failure categorization.
 
 ### Next
 - Add configurable generation parameters from YAML into model.generate.
+
+## 2026-07-03
+
+### Goal
+Make generation parameters configurable from YAML.
+
+### What I did
+- Updated GSM8K evaluator to accept generation settings.
+- Updated run_eval.py to read max_new_tokens, temperature, and top_p from YAML.
+- Added generation settings to run summaries and leaderboard rows.
+
+### Results
+- Evaluation runs now record decoding parameters.
+- Future model comparisons will be more reproducible.
+
+### Issues
+- tiny-gpt2 is still only a smoke-test model.
+
+### Next
+- Add an automatic latest-run helper or result inspection by run directory.

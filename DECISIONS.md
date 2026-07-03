@@ -102,3 +102,28 @@ The categories are simple and heuristic-based, but they are useful enough for ea
 ### Status
 
 Accepted.
+
+## Decision 006: Store generation parameters in YAML configs
+
+### Decision
+
+Generation settings such as `max_new_tokens`, `temperature`, and `top_p` will be read from YAML configs.
+
+### Reason
+
+Evaluation behavior must be reproducible.
+
+Changing decoding settings can change model outputs and benchmark scores.
+
+### Alternatives Considered
+
+- Hardcode generation settings in evaluator code.
+- Pass generation settings only as CLI arguments.
+
+### Tradeoff
+
+YAML config adds small overhead, but makes experiments easier to reproduce and compare.
+
+### Status
+
+Accepted.

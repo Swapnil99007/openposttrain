@@ -50,6 +50,9 @@ def main():
         model=model,
         split=benchmark_config.get("split", "test"),
         limit=benchmark_config.get("limit"),
+        max_new_tokens=model_config.get("max_new_tokens", 256),
+        temperature=model_config.get("temperature", 0.0),
+        top_p=model_config.get("top_p", 1.0),
     )
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -71,6 +74,9 @@ def main():
         "limit": eval_output["limit"],
         "accuracy": eval_output["accuracy"],
         "num_examples": eval_output["num_examples"],
+        "max_new_tokens": model_config.get("max_new_tokens", 256),
+        "temperature": model_config.get("temperature", 0.0),
+        "top_p": model_config.get("top_p", 1.0),
         "config_path": args.config,
         "output_dir": output_dir,
     }

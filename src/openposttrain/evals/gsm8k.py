@@ -77,7 +77,14 @@ Problem:
 """.strip()
 
 
-def run_gsm8k_eval(model, split: str = "test", limit: int = 50):
+def run_gsm8k_eval(
+    model,
+    split: str = "test",
+    limit: int = 50,
+    max_new_tokens: int = 256,
+    temperature: float = 0.0,
+    top_p: float = 1.0,
+):
     dataset = load_dataset("openai/gsm8k", "main", split=split)
 
     if limit:
@@ -90,7 +97,12 @@ def run_gsm8k_eval(model, split: str = "test", limit: int = 50):
         gold_answer = row["answer"]
 
         prompt = build_prompt(question)
-        model_answer = model.generate(prompt)
+        model_answer = model.generate(
+            prompt=prompt,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
 
         extracted_gold = extract_gsm8k_gold(gold_answer)
         extracted_model = extract_model_answer(model_answer)

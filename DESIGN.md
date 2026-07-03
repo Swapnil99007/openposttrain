@@ -148,3 +148,21 @@ Purpose:
 - Separate reasoning failures from formatting failures
 - Diagnose answer extraction problems
 - Improve evaluation quality beyond aggregate accuracy
+
+## Generation Configuration
+
+Generation settings are read from YAML configs and passed into model generation.
+
+Current supported generation fields:
+
+- max_new_tokens
+- temperature
+- top_p
+
+Purpose:
+
+- Make evaluation runs reproducible
+- Avoid hardcoded decoding behavior
+- Compare how decoding settings affect benchmark performance
+
+For deterministic evaluation, temperature is usually set to 0.0.
