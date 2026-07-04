@@ -46,6 +46,7 @@ def main():
     model = HFModel(
         model_name=model_name,
         device=model_config.get("device", "auto"),
+        adapter_path=model_config.get("adapter_path"),
     )
 
     eval_runner = get_eval_runner(benchmark_name)
@@ -83,6 +84,7 @@ def main():
         "temperature": model_config.get("temperature", 0.0),
         "top_p": model_config.get("top_p", 1.0),
         "prompt_path": prompt_path,
+        "adapter_path": model_config.get("adapter_path"),
         "config_path": args.config,
         "output_dir": output_dir,
     }

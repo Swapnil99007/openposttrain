@@ -1,0 +1,22 @@
+run_name: gsm8k_qwen2_5_1_5b_instruct_sft_lora_512_tokens
+
+# Identical to configs/eval_gsm8k_qwen2_5_1_5b_512.yaml (the baseline) except
+# for adapter_path -- everything else is held constant so accuracy differences
+# are attributable to the SFT adapter, not a confound (Decision 012).
+model:
+  name: Qwen/Qwen2.5-1.5B-Instruct
+  adapter_path: outputs/sft/qwen2_5_1_5b_gsm8k_lora
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

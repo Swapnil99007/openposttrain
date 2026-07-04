@@ -1,10 +1,12 @@
+from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 
 class HFModel:
-    def __init__(self, model_name: str, device: str = "auto"):
+    def __init__(self, model_name: str, device: str = "auto", adapter_path: str | None = None):
         self.model_name = model_name
+        self.adapter_path = adapter_path
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -18,6 +20,9 @@ class HFModel:
             dtype=dtype,
             device_map=device,
         )
+
+        if adapter_path:
+            self.model = PeftModel.from_pretrained(self.model, adapter_path)
 
         self.model.eval()
 
