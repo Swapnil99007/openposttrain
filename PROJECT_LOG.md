@@ -292,3 +292,26 @@ Use the 512-token Qwen run as the current meaningful baseline before SFT.
 
 ### Next
 Prepare targeted GSM8K SFT data based on real Qwen failure modes.
+
+## 2026-07-04 (SFT data preparation)
+
+### Goal
+Build the GSM8K SFT data preparation pipeline before any training.
+
+### What I did
+- Added `src/openposttrain/data/gsm8k_sft.py`: strips GSM8K calculator annotations (`<<16-3=13>>13`) and builds chat-format (`{"messages": [...]}`) records whose assistant turn ends in `Final Answer: <number>`, matching what the evaluator already parses.
+- Added `src/openposttrain/utils/jsonl.py` as a generic JSONL writer.
+- Added `configs/data_gsm8k_sft_small.yaml` and `scripts/prepare_gsm8k_sft_data.py`.
+- Added `docs/dataset_format.md` documenting the record schema.
+- Fixed a `.gitignore` bug: the unanchored `data/` pattern was matching `src/openposttrain/data/` (the new source package) in addition to the intended top-level `data/` directory. Changed to `/data/`.
+- Removed the superseded one-off `reports/gsm8k_qwen_baseline_report.md` (replaced by the regeneratable `reports/gsm8k_report.md`).
+
+### Results
+- Generated `data/sft/gsm8k_train_small.jsonl` (200 examples) and `data/sft/gsm8k_val_small.jsonl` (50 examples), both from GSM8K's `train` split at disjoint row ranges.
+- Verified output is clean (no leftover calculator annotations) and inspected the literal token string via `tokenizer.apply_chat_template` to confirm training-time input matches the eval-time chat template.
+
+### Decision
+Draw SFT train/validation data only from GSM8K's `train` split, never `test` — the `test` split stays untouched for the base-vs-SFT comparison in Stage 18 (see Decision 018).
+
+### Next
+Write the LoRA SFT training script (Stage 16) and run it on RunPod against `Qwen/Qwen2.5-1.5B-Instruct`.

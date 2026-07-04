@@ -1,0 +1,33 @@
+model:
+  name: Qwen/Qwen2.5-1.5B-Instruct
+
+data:
+  train_path: data/sft/gsm8k_train_small.jsonl
+  validation_path: data/sft/gsm8k_val_small.jsonl
+
+# Standard starting-point LoRA rank/alpha (alpha = 2x r is a common default).
+# Targeting all attention + MLP projections is the usual choice for Qwen2-family models.
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+# 200 train / 50 validation examples is intentionally small -- this run is
+# about proving the training loop works end-to-end (same idea as the
+# tiny-gpt2 smoke test in Stage 2), before deciding whether to scale up
+# the dataset size.
+training:
+  output_dir: outputs/sft/qwen2_5_1_5b_gsm8k_lora
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0002
+  max_length: 768
+  logging_steps: 5
+  eval_strategy: epoch
+  save_strategy: epoch
+  bf16: true
+  seed: 42
+  report_to: none

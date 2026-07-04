@@ -216,6 +216,19 @@ The 256-token run was heavily affected by truncation. The 512-token run is the c
     python scripts/compare_failure_types.py --benchmark gsm8k
     python scripts/compare_runs.py --benchmark gsm8k
 
+## Prepare GSM8K SFT Data
+
+Generate chat-format JSONL training/validation data from GSM8K (no GPU needed, runs anywhere):
+
+    PYTHONPATH=src python scripts/prepare_gsm8k_sft_data.py --config configs/data_gsm8k_sft_small.yaml
+
+This writes:
+
+    data/sft/gsm8k_train_small.jsonl
+    data/sft/gsm8k_val_small.jsonl
+
+Both are drawn only from GSM8K's `train` split at disjoint row ranges — the `test` split (used for the baseline above) is never touched, so it stays available for an unbiased base-vs-SFT comparison later. See `docs/dataset_format.md` for the record schema.
+
 ### Next Step
 
-The next phase is targeted GSM8K SFT data preparation based on Qwen failure modes.
+The next phase is LoRA SFT training on the prepared data, using `Qwen/Qwen2.5-1.5B-Instruct` on RunPod.

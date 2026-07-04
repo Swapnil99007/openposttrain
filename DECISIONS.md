@@ -314,3 +314,18 @@ Qwen2.5-1.5B-Instruct results:
 
 ### Status
 Accepted.
+
+## Decision 018: Draw SFT train/validation data only from GSM8K's train split
+
+### Decision
+`configs/data_gsm8k_sft_small.yaml` builds both the SFT train set and the SFT validation set from GSM8K's `train` split only, using disjoint row ranges (validation starts immediately after where train ends). The `test` split is never read during data prep.
+
+### Reason
+The Qwen baseline (Decisions 016/017) used `test[0:100]`, and Stage 18 will re-run that same 100-example slice to compare base vs. SFT accuracy. If SFT validation data were drawn from `test`, validation loss could end up correlated with the exact examples used for the final resume-facing comparison, undermining its credibility.
+
+### Alternatives Considered
+- Draw validation from `test` split (rejected: risks overlap with the future base-vs-SFT comparison set).
+- Draw validation from a random sample of `train` instead of an index range (rejected for now: an offset range is simpler and just as effective at this data size).
+
+### Status
+Accepted.
