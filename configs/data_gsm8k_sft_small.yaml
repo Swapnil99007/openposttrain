@@ -1,0 +1,22 @@
+dataset:
+  name: openai/gsm8k
+  subset: main
+
+# Both splits are read from GSM8K's "train" split, at disjoint row ranges
+# (train: rows [0, train_limit), validation: rows [train_limit, train_limit + validation_limit)).
+# The "test" split is intentionally never used here — it's reserved untouched
+# for base-vs-SFT accuracy comparison in Stage 18.
+splits:
+  train_split: train
+  validation_split: train
+
+limits:
+  train_limit: 200
+  validation_limit: 50
+
+prompt:
+  path: prompts/gsm8k_v1.txt
+
+output:
+  train_path: data/sft/gsm8k_train_small.jsonl
+  validation_path: data/sft/gsm8k_val_small.jsonl
