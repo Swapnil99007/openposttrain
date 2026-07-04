@@ -342,5 +342,8 @@ The first real training run (3 epochs, 200 train / 50 validation examples, `Qwen
 - Manually pick a fixed lower epoch count (rejected: guessing an epoch count is less defensible than letting eval loss decide, and would need re-tuning if dataset size changes).
 - Scale up the training set size instead (may still be worth doing later, but doesn't replace having a correctness guardrail in the training script itself).
 
+### Verification
+Re-ran training on RunPod with the fix. Same overfitting shape as before (`eval_loss`: 0.3808 -> 0.4005 -> 0.4545 across epochs 1-3), confirming epoch 1 as best. Verified directly via `md5sum` that the top-level `adapter_model.safetensors` is byte-identical to `checkpoint-13` (epoch 1), not `checkpoint-39` (epoch 3) -- `load_best_model_at_end` is working as intended.
+
 ### Status
 Accepted.

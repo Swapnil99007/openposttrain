@@ -229,6 +229,25 @@ This writes:
 
 Both are drawn only from GSM8K's `train` split at disjoint row ranges — the `test` split (used for the baseline above) is never touched, so it stays available for an unbiased base-vs-SFT comparison later. See `docs/dataset_format.md` for the record schema.
 
+## Run LoRA SFT Training
+
+Requires the RunPod GPU (not the Mac). On RunPod, with the venv activated:
+
+    python -m pip install peft trl
+    PYTHONPATH=src python scripts/train_sft_lora.py --config configs/train_sft_qwen2_5_1_5b_gsm8k.yaml
+
+This trains a LoRA adapter on top of `Qwen/Qwen2.5-1.5B-Instruct` using the prepared GSM8K SFT data, and saves it to `outputs/sft/qwen2_5_1_5b_gsm8k_lora` (local-only, `outputs/` is gitignored).
+
+### Current Result
+
+| Epoch | eval_loss | eval_mean_token_accuracy |
+|---:|---:|---:|
+| 1 | 0.3808 | 0.8822 |
+| 2 | 0.4005 | 0.8758 |
+| 3 | 0.4545 | 0.8707 |
+
+Eval loss rises after epoch 1 (overfitting on the small 200-example set), so the trainer is configured to automatically keep the best (epoch 1) checkpoint rather than the last one.
+
 ### Next Step
 
-The next phase is LoRA SFT training on the prepared data, using `Qwen/Qwen2.5-1.5B-Instruct` on RunPod.
+Stage 17: evaluate the SFT adapter against the same GSM8K `test[0:100]` slice used for the Qwen baseline, for a real base-vs-SFT accuracy comparison.

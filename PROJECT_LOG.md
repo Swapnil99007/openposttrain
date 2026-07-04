@@ -315,3 +315,27 @@ Draw SFT train/validation data only from GSM8K's `train` split, never `test` —
 
 ### Next
 Write the LoRA SFT training script (Stage 16) and run it on RunPod against `Qwen/Qwen2.5-1.5B-Instruct`.
+
+## 2026-07-04 (LoRA SFT training)
+
+### Goal
+Run LoRA SFT training on the prepared GSM8K data and get a working adapter.
+
+### What I did
+- Added `src/openposttrain/training/sft_lora.py` (dataset loading + prompt/completion conversion, LoRA config, `SFTConfig` builder) and `scripts/train_sft_lora.py` (CLI), using TRL's `SFTTrainer` + PEFT LoRA.
+- Chose "prompt-completion" format (not `assistant_only_loss` on raw `messages`) so completion-only loss masking doesn't depend on the chat template having `{% generation %}` markers, which isn't guaranteed for every model family.
+- Fixed an environment issue on a fresh RunPod pod: bare `pip install torch` grabbed the newest PyPI wheel (cu13-targeted), incompatible with the pod's driver (cuda12.4.1 image); fixed by installing from `https://download.pytorch.org/whl/cu124`.
+- Ran a first training pass (3 epochs, 200 train / 50 validation examples, `Qwen/Qwen2.5-1.5B-Instruct`, RunPod RTX 3090). Found clear overfitting: train loss kept dropping (0.42 -> 0.20) but eval_loss rose after epoch 1 (0.3795 -> 0.3997 -> 0.4531) and eval accuracy fell.
+- Added `load_best_model_at_end=True` (`metric_for_best_model="eval_loss"`) so the saved adapter is the best-eval-loss checkpoint, not just the last epoch (Decision 019).
+- Re-ran training; verified via `md5sum` that the saved adapter is byte-identical to the epoch-1 checkpoint, confirming the fix works.
+
+### Results
+- Final adapter: `outputs/sft/qwen2_5_1_5b_gsm8k_lora` (epoch-1 checkpoint, `eval_loss=0.3808`, `eval_mean_token_accuracy=0.8822`).
+- Training pipeline (TRL SFTTrainer + PEFT LoRA + prompt-completion masking + best-checkpoint selection) is verified working end-to-end on RunPod.
+
+### Issues
+- 200 examples is a small dataset; overfitting past epoch 1 suggests the training set should probably be scaled up before relying on more epochs.
+- `mean_token_accuracy` is a token-level training proxy, not the same as GSM8K exact-match accuracy -- doesn't tell us yet whether the adapter actually improves on the real benchmark.
+
+### Next
+Stage 17: add adapter-loading support to the eval pipeline and run the SFT adapter against the same GSM8K `test[0:100]` slice used for the Qwen baseline, to get a real base-vs-SFT accuracy comparison.

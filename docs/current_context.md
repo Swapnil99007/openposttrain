@@ -13,7 +13,7 @@ The goal is to build practical experience with:
 - later preference tuning / DPO
 
 ## Current Stage
-The project has completed the first meaningful baseline evaluation stage and the GSM8K SFT data preparation stage. Next is LoRA SFT training.
+The project has completed: baseline evaluation, GSM8K SFT data preparation, and LoRA SFT training (verified working, adapter saved). Next is base-vs-SFT evaluation.
 
 ## Current Baseline
 
@@ -71,7 +71,19 @@ General-purpose GSM8K SFT data has been generated (not yet the targeted failure-
 
 Both are chat-format JSONL (`{"messages": [...]}`), with the assistant turn ending in `Final Answer: <number>` to match the evaluator's parsing. GSM8K's `test` split was never touched, so it remains valid for an unbiased base-vs-SFT comparison later. See `docs/dataset_format.md`.
 
+## LoRA SFT Training Complete
+
+Trained a LoRA adapter (`outputs/sft/qwen2_5_1_5b_gsm8k_lora`) on `Qwen/Qwen2.5-1.5B-Instruct` using TRL's `SFTTrainer` + PEFT, 3 epochs over the 200/50 train/validation split.
+
+| Epoch | eval_loss | eval_mean_token_accuracy |
+|---:|---:|---:|
+| 1 | 0.3808 | 0.8822 |
+| 2 | 0.4005 | 0.8758 |
+| 3 | 0.4545 | 0.8707 |
+
+Overfitting after epoch 1 on this small dataset; `load_best_model_at_end` keeps the epoch-1 checkpoint automatically (verified via `md5sum`). `mean_token_accuracy` is a training proxy, not GSM8K exact-match accuracy.
+
 ## Next Step
-Write and run the LoRA SFT training script (Stage 16) on RunPod, using `Qwen/Qwen2.5-1.5B-Instruct` as the base model.
+Stage 17: add PEFT adapter-loading support to the eval pipeline, then run the SFT adapter against the same GSM8K `test[0:100]` slice used for the Qwen baseline for a real base-vs-SFT accuracy comparison.
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.
