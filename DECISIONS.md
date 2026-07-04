@@ -329,3 +329,18 @@ The Qwen baseline (Decisions 016/017) used `test[0:100]`, and Stage 18 will re-r
 
 ### Status
 Accepted.
+
+## Decision 019: Use load_best_model_at_end for LoRA SFT training
+
+### Decision
+`build_sft_training_args` in `src/openposttrain/training/sft_lora.py` sets `load_best_model_at_end=True`, `metric_for_best_model="eval_loss"`, `greater_is_better=False`, so the final saved adapter is whichever epoch had the lowest validation loss, not simply the last epoch trained.
+
+### Reason
+The first real training run (3 epochs, 200 train / 50 validation examples, `Qwen/Qwen2.5-1.5B-Instruct`) showed train loss decreasing every step (0.42 -> 0.20) while eval_loss increased after epoch 1 (0.3795 -> 0.3997 -> 0.4531) and eval_mean_token_accuracy decreased (0.8822 -> 0.8761 -> 0.8708). This is overfitting on a small dataset: without this setting, the saved adapter would have been the most-overfit epoch-3 checkpoint.
+
+### Alternatives Considered
+- Manually pick a fixed lower epoch count (rejected: guessing an epoch count is less defensible than letting eval loss decide, and would need re-tuning if dataset size changes).
+- Scale up the training set size instead (may still be worth doing later, but doesn't replace having a correctness guardrail in the training script itself).
+
+### Status
+Accepted.

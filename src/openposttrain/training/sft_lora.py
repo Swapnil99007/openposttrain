@@ -57,4 +57,11 @@ def build_sft_training_args(training_config: dict) -> SFTConfig:
         bf16=training_config.get("bf16", True),
         seed=training_config.get("seed", 42),
         report_to=training_config.get("report_to", "none"),
+        # Guards against overfitting on a small dataset: track eval_loss at
+        # each save point and keep the best checkpoint's weights rather than
+        # whichever epoch happened to run last. Requires save_strategy to
+        # match eval_strategy (both default to "epoch" above).
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
     )
