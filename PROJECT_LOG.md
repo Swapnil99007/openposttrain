@@ -255,3 +255,40 @@ Add experiment report generation.
 
 ### Next
 - Start preparing for actual post-training data generation.
+
+## 2026-07-04
+
+### Goal
+Run a proper GSM8K baseline using a real instruction model before starting post-training.
+
+### What I did
+- Ran `Qwen/Qwen2.5-1.5B-Instruct` on GSM8K using RunPod RTX 3090.
+- First run used `max_new_tokens=256`.
+- Second run used `max_new_tokens=512`.
+- Fixed numeric normalization in the GSM8K evaluator so values like `460.0` and `460` are treated equivalently.
+- Transferred raw RunPod results back to the local machine.
+
+### Results
+
+| Model | Limit | Max New Tokens | Accuracy | Correct | Format Violations | Wrong Numeric |
+|---|---:|---:|---:|---:|---:|---:|
+| Qwen2.5-1.5B-Instruct | 100 | 256 | 0.43 | 43 | 54 | 3 |
+| Qwen2.5-1.5B-Instruct | 100 | 512 | 0.70 | 70 | 18 | 12 |
+
+### Key Finding
+The first Qwen baseline was artificially low because `max_new_tokens=256` caused many generations to truncate before the model reached the final answer.
+
+Increasing to `max_new_tokens=512` improved accuracy from 43% to 70%.
+
+### Failure Analysis
+Remaining failures are mostly:
+- arithmetic mistakes
+- incorrect interpretation of word problems
+- boundary-condition mistakes
+- remaining formatting / final-answer issues
+
+### Decision
+Use the 512-token Qwen run as the current meaningful baseline before SFT.
+
+### Next
+Prepare targeted GSM8K SFT data based on real Qwen failure modes.

@@ -272,3 +272,45 @@ Reports make project progress easier to review, share, and explain in interviews
 ### Status
 
 Accepted.
+
+## Decision 016: Run a real instruction-model baseline before SFT
+
+### Decision
+Before preparing SFT data, run a meaningful baseline using `Qwen/Qwen2.5-1.5B-Instruct`.
+
+### Reason
+Earlier runs with `tiny-gpt2` and `SmolLM2-135M-Instruct` were useful for validating the evaluation pipeline, but they were too weak to guide real post-training decisions.
+
+A stronger instruction model gives a more realistic view of:
+- reasoning failures
+- formatting failures
+- generation-length issues
+- evaluator bugs
+
+### Result
+The Qwen2.5-1.5B baseline reached 70% accuracy on the first 100 GSM8K test examples with `max_new_tokens=512`.
+
+### Status
+Accepted.
+
+## Decision 017: Use 512 max new tokens for GSM8K baseline evaluation
+
+### Decision
+Use `max_new_tokens=512` for the current GSM8K baseline instead of `256`.
+
+### Reason
+The 256-token run caused many responses to truncate before the final answer. This made the model look worse than it actually was.
+
+### Evidence
+Qwen2.5-1.5B-Instruct results:
+
+| Max New Tokens | Accuracy | Format Violations |
+|---:|---:|---:|
+| 256 | 0.43 | 54 |
+| 512 | 0.70 | 18 |
+
+### Tradeoff
+512 tokens increases evaluation runtime, but gives a more accurate baseline.
+
+### Status
+Accepted.

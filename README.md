@@ -184,3 +184,38 @@ To compare prompt versions for a model:
 To generate a markdown report for GSM8K:
 
     python scripts/generate_experiment_report.py --benchmark gsm8k --output reports/gsm8k_report.md
+
+## Current GSM8K Baseline
+
+The current meaningful baseline uses:
+
+- Model: `Qwen/Qwen2.5-1.5B-Instruct`
+- Benchmark: GSM8K
+- Split: test
+- Limit: 100
+- Hardware: RunPod RTX 3090
+- Prompt: `prompts/gsm8k_v1.txt`
+- Generation: deterministic, `temperature=0.0`
+
+### Results
+
+| Model | Max New Tokens | Accuracy |
+|---|---:|---:|
+| Qwen2.5-1.5B-Instruct | 256 | 0.43 |
+| Qwen2.5-1.5B-Instruct | 512 | 0.70 |
+
+The 256-token run was heavily affected by truncation. The 512-token run is the current baseline for future post-training comparisons.
+
+### Run Qwen Baseline
+
+    PYTHONPATH=src python scripts/run_eval.py --config configs/eval_gsm8k_qwen2_5_1_5b_512.yaml
+
+### Inspect Failures
+
+    python scripts/inspect_latest_failures.py --benchmark gsm8k --limit 15
+    python scripts/compare_failure_types.py --benchmark gsm8k
+    python scripts/compare_runs.py --benchmark gsm8k
+
+### Next Step
+
+The next phase is targeted GSM8K SFT data preparation based on Qwen failure modes.

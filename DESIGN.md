@@ -282,3 +282,61 @@ Purpose:
 - Summarize leaderboard runs
 - Aggregate failure categories
 - Produce a shareable experiment report under reports/
+
+## Real Baseline Evaluation Stage
+
+Before starting post-training, OpenPostTrain runs a meaningful baseline with a real instruction model.
+
+Current baseline model:
+
+- `Qwen/Qwen2.5-1.5B-Instruct`
+
+Current benchmark:
+
+- GSM8K
+- test split
+- first 100 examples
+- deterministic generation
+- `temperature=0.0`
+- `top_p=1.0`
+- `max_new_tokens=512`
+
+### Why this stage exists
+
+Post-training should not be done blindly.
+
+The baseline identifies:
+- whether the model can follow the prompt
+- whether failures are caused by truncation
+- whether failures are caused by evaluator bugs
+- whether failures are true reasoning mistakes
+- what kind of SFT data should be prepared
+
+### Current result
+
+The current meaningful baseline is:
+
+| Model | Benchmark | Limit | Max New Tokens | Accuracy |
+|---|---|---:|---:|---:|
+| Qwen2.5-1.5B-Instruct | GSM8K | 100 | 512 | 0.70 |
+
+### Failure Categories
+
+The evaluator tracks:
+
+- `correct`
+- `no_numeric_answer`
+- `format_violation`
+- `wrong_numeric_answer`
+
+After the 512-token Qwen run, most remaining failures are real math/reasoning failures or final-answer-format issues.
+
+### Next Design Step
+
+The next stage is targeted SFT data preparation.
+
+The SFT data should focus on:
+- concise reasoning
+- correct final-answer format
+- arithmetic correctness
+- common GSM8K failure patterns observed in the Qwen baseline
