@@ -1,0 +1,18 @@
+run_name: gsm8k_qwen2_5_1_5b_instruct_baseline_512_tokens
+
+model:
+  name: Qwen/Qwen2.5-1.5B-Instruct
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

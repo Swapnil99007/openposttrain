@@ -21,10 +21,21 @@ class EvalResult:
 def normalize_number(value: str) -> str:
     value = str(value).strip().replace(",", "").replace("$", "")
 
-    if value.endswith(".0"):
-        value = value[:-2]
+    if not value:
+        return ""
 
-    return value
+    if value.endswith("."):
+        value = value[:-1]
+
+    try:
+        numeric_value = float(value)
+
+        if numeric_value.is_integer():
+            return str(int(numeric_value))
+
+        return str(numeric_value)
+    except ValueError:
+        return value
 
 
 def extract_gsm8k_gold(answer: str) -> str:
