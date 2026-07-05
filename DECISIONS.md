@@ -369,4 +369,4 @@ Formatting compliance improved sharply (18 -> 3). Actual reasoning got much wors
 Secondary confound worth ruling out (not expected to explain the full gap): eval loads the base model in fp16, training ran in bf16.
 
 ### Status
-Open -- see PROJECT_LOG.md 2026-07-04 (base-vs-SFT eval) for next-step options under discussion.
+Retrying with a combined fix: scale training data 200 -> 1500 examples (`configs/data_gsm8k_sft_medium.yaml`) and make LoRA less aggressive -- `r: 16->8`, `alpha: 32->16` (keeping `alpha=2xr`), `learning_rate: 2e-4->1e-4` (`configs/train_sft_qwen2_5_1_5b_gsm8k_v2.yaml`). Both changed at once, so if this works we won't know which lever mattered more -- accepted tradeoff for a faster path to a working adapter. Original 200-example configs kept as-is for reproducibility/comparison.

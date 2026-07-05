@@ -1,0 +1,31 @@
+model:
+  name: Qwen/Qwen2.5-1.5B-Instruct
+
+data:
+  train_path: data/sft/gsm8k_train_medium.jsonl
+  validation_path: data/sft/gsm8k_val_medium.jsonl
+
+# Gentler than the first attempt (r=16/alpha=32/lr=2e-4), which regressed
+# GSM8K accuracy 70% -> 45% on only 200 training examples (Decision 020).
+# alpha is kept at 2x r so the effective update scale (alpha/r) doesn't
+# increase just because r dropped.
+lora:
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+training:
+  output_dir: outputs/sft/qwen2_5_1_5b_gsm8k_lora_v2
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0001
+  max_length: 768
+  logging_steps: 5
+  eval_strategy: epoch
+  save_strategy: epoch
+  bf16: true
+  seed: 42
+  report_to: none
