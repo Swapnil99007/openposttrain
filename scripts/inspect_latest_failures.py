@@ -21,7 +21,13 @@ def parse_args():
         "--limit",
         type=int,
         default=5,
-        help="Maximum number of failed examples to print.",
+        help="Maximum number of examples to print.",
+    )
+    parser.add_argument(
+        "--show",
+        choices=["failed", "correct", "all"],
+        default="failed",
+        help="Which examples to print: failed (default), correct, or all.",
     )
     return parser.parse_args()
 
@@ -62,6 +68,8 @@ def main():
         str(results_file),
         "--limit",
         str(args.limit),
+        "--show",
+        args.show,
     ]
 
     inspect_main()

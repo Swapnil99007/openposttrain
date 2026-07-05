@@ -13,7 +13,13 @@ def parse_args():
         "--limit",
         type=int,
         default=5,
-        help="Maximum number of failed examples to print.",
+        help="Maximum number of examples to print.",
+    )
+    parser.add_argument(
+        "--show",
+        choices=["failed", "correct", "all"],
+        default="failed",
+        help="Which examples to print: failed (default), correct, or all.",
     )
     return parser.parse_args()
 
@@ -44,7 +50,14 @@ def main():
 
     print("=" * 80)
 
-    for idx, row in failed_df.head(args.limit).iterrows():
+    if args.show == "failed":
+        shown_df = failed_df
+    elif args.show == "correct":
+        shown_df = df[df["is_correct"] == True]
+    else:
+        shown_df = df
+
+    for idx, row in shown_df.head(args.limit).iterrows():
         print()
         print("-" * 80)
         print(f"Example index: {idx}")
