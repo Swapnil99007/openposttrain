@@ -3,8 +3,21 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 
+DTYPE_NAMES = {
+    "float16": torch.float16,
+    "bfloat16": torch.bfloat16,
+    "float32": torch.float32,
+}
+
+
 class HFModel:
-    def __init__(self, model_name: str, device: str = "auto", adapter_path: str | None = None):
+    def __init__(
+        self,
+        model_name: str,
+        device: str = "auto",
+        adapter_path: str | None = None,
+        dtype: str | None = None,
+    ):
         self.model_name = model_name
         self.adapter_path = adapter_path
 
@@ -13,11 +26,14 @@ class HFModel:
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+        if dtype:
+            resolved_dtype = DTYPE_NAMES[dtype]
+        else:
+            resolved_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            dtype=dtype,
+            dtype=resolved_dtype,
             device_map=device,
         )
 

@@ -47,6 +47,7 @@ def main():
         model_name=model_name,
         device=model_config.get("device", "auto"),
         adapter_path=model_config.get("adapter_path"),
+        dtype=model_config.get("dtype"),
     )
 
     eval_runner = get_eval_runner(benchmark_name)
@@ -85,6 +86,7 @@ def main():
         "top_p": model_config.get("top_p", 1.0),
         "prompt_path": prompt_path,
         "adapter_path": model_config.get("adapter_path"),
+        "dtype": model_config.get("dtype"),
         "config_path": args.config,
         "output_dir": output_dir,
     }

@@ -370,3 +370,13 @@ Secondary confound worth ruling out (not expected to explain the full gap): eval
 
 ### Status
 Retrying with a combined fix: scale training data 200 -> 1500 examples (`configs/data_gsm8k_sft_medium.yaml`) and make LoRA less aggressive -- `r: 16->8`, `alpha: 32->16` (keeping `alpha=2xr`), `learning_rate: 2e-4->1e-4` (`configs/train_sft_qwen2_5_1_5b_gsm8k_v2.yaml`). Both changed at once, so if this works we won't know which lever mattered more -- accepted tradeoff for a faster path to a working adapter. Original 200-example configs kept as-is for reproducibility/comparison.
+
+### v2 Result (more data + gentler LoRA)
+Accuracy: **0.49** (49 correct, 1 format_violation, 50 wrong_numeric_answer) -- only marginally better than v1's 0.45, still far below the 0.70 baseline.
+
+Training metrics did behave as intended: `eval_loss` is much flatter across epochs (0.4201 -> 0.4205 -> 0.4354) vs. v1's clear overfitting shape (0.3808 -> 0.3997 -> 0.4531). So the fix genuinely reduced overfitting during training -- but that barely moved downstream accuracy. **Overfitting is not the whole story.**
+
+Failure examples show something more specific than "worse reasoning": several are internally incoherent, not just wrong. E.g. James running: model writes "He runs 540 meters a week because 540 x 3 = 1620" (self-contradictory -- states 540 then multiplies it by 3 anyway). Toula bakery: computes `12*68`, `12*80`, `12*55` for all three items -- using "12" (the literal meaning of "dozen") as the multiplier instead of the actual quantity purchased (3, 2, 6 dozen), a systematic misapplied heuristic. Carla download: introduces "hours" out of nowhere in a GB/minutes problem. This looks like generation instability, not simply biased-but-coherent errors -- which is a different signature than plain small-data overfitting.
+
+### Next
+Isolate the fp16(eval)/bf16(train) precision mismatch as a possible contributor before making further training changes -- added `dtype` support to `HFModel`/`run_eval.py` and `configs/eval_gsm8k_qwen2_5_1_5b_sft_v2_bf16.yaml` (same v2 adapter, eval in bf16 instead of fp16). Cheap to test, and the incoherent-output pattern is consistent with a numerics artifact compounding over long greedy-decoded generations, not just with a data/capacity problem.

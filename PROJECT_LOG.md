@@ -366,3 +366,24 @@ Not yet made -- see Decision 020 (status: Open). Considering: (a) scale up the S
 
 ### Next
 Decide and execute a fix, then re-run the same controlled baseline-vs-SFT comparison to check whether it closes the gap.
+
+## 2026-07-05 (SFT retry v2: more data + gentler LoRA)
+
+### Goal
+Test whether scaling up training data (200 -> 1500 examples) and making LoRA gentler (`r:16->8`, `alpha:32->16`, `lr:2e-4->1e-4`) fixes the accuracy regression from Decision 020.
+
+### What I did
+- Added `configs/data_gsm8k_sft_medium.yaml`, `configs/train_sft_qwen2_5_1_5b_gsm8k_v2.yaml`, `configs/eval_gsm8k_qwen2_5_1_5b_sft_v2.yaml` (versioned alongside the originals, not overwriting them).
+- Regenerated SFT data (1500 train / 150 validation), retrained, re-ran the same controlled eval on RunPod.
+
+### Results
+Accuracy: 0.49 (vs. v1's 0.45, vs. baseline's 0.70). `eval_loss` during training was much flatter (0.4201 -> 0.4205 -> 0.4354) than v1's clear overfitting curve -- the fix worked as intended on the training side, but barely moved downstream accuracy.
+
+### Key Finding
+Overfitting was not the whole story. Several v2 failure examples are internally incoherent (self-contradictory arithmetic, made-up units), not just consistently biased -- see Decision 020 for specific examples (James running, Toula bakery, Carla download). That signature is more consistent with a generation-stability issue than a pure small-data/capacity problem.
+
+### Decision
+Before making further training changes, isolate the fp16(eval)/bf16(train) precision mismatch as a possible contributor -- added `dtype` support to `HFModel` and a bf16 eval config for the v2 adapter. Cheap, fast test.
+
+### Next
+Run `configs/eval_gsm8k_qwen2_5_1_5b_sft_v2_bf16.yaml` and compare accuracy to the fp16 v2 result (0.49). If bf16 closes a meaningful part of the gap, precision mismatch is a real contributor. If accuracy is essentially unchanged, rule it out and look harder at training data style/quality instead.
