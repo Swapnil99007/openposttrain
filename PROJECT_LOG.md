@@ -472,7 +472,7 @@ Accuracy dropped to **0.00** (0 correct, 76 no_numeric_answer, 23 format_violati
 ### Key Finding
 The repetition-penalty fix didn't reveal hidden capability -- it eliminated the repetition loop, but what's underneath is still non-functional. This means the original "3 correct" at 0.03 were very likely coincidental (numbers pulled from repeated garbage or the echoed prompt happening to match gold answers), not real reasoning. **Confirmed: the base model genuinely cannot do this task zero-shot, in any decoding configuration tested.** This is the ideal starting point for demonstrating SFT -- there's no existing capability to fight against.
 
-Also confirmed empirically (contradicting a blanket claim in TRL's own docs) that `Qwen/Qwen2.5-1.5B`'s tokenizer has **no chat template** -- the very first zero-shot completion showed raw unwrapped prompt text with no chat tokens at all, meaning `HFModel.generate()`'s fallback path (`text = prompt`) was used. Good thing this was checked empirically rather than trusted from the doc.
+Also suspected (but had not directly verified) that `Qwen/Qwen2.5-1.5B`'s tokenizer has no usable chat template, based on the zero-shot completion showing what looked like raw unwrapped prompt text. That specific claim turned out to be an overreach -- see the training crash below, which suggests the real picture is more nuanced (TRL detected new tokens when cloning the chat template regardless of what was already there). Lesson: "looked like X in one output" isn't the same as "confirmed X" -- should have checked `tokenizer.chat_template` directly instead of inferring from behavior.
 
 ### Decision
 - Training config (`configs/train_sft_qwen2_5_1_5b_base_gsm8k.yaml`) sets `chat_template_path: Qwen/Qwen2.5-1.5B-Instruct` (borrowing the sibling model's template) and `eos_token: "<|im_end|>"`, per TRL's documented pattern.
@@ -481,3 +481,15 @@ Also confirmed empirically (contradicting a blanket claim in TRL's own docs) tha
 
 ### Next
 Regenerate SFT data (fresh RunPod pod, `data/` never persisted), train, and eval. Compare against the 0.00 baseline.
+
+### Results (training crashed)
+Training crashed on the very first step (`AttributeError: 'TrainableTokensWrapper' object has no attribute 'bias'`), inside TRL's chunked-loss forward pass. The eval command run afterward also failed, but only as a downstream symptom -- there was no adapter directory to load a tokenizer from, since training never reached `save_model()`.
+
+### Root Cause
+TRL logged the real cause right before the crash: `"Cloning chat template added new tokens to the tokenizer, but 'lm_head' is not in PEFT's modules_to_save... add modules_to_save=['lm_head'] to your PEFT configuration."` Borrowing the Instruct model's chat template via `chat_template_path` added tokens the LoRA config wasn't told to make trainable, and combined with tied input/output embeddings (`tie_word_embeddings=True`), this hit an incompatible code path in TRL's chunked cross-entropy loss.
+
+### Decision
+Added `modules_to_save` passthrough to `build_lora_config` (`src/openposttrain/training/sft_lora.py`) and set `modules_to_save: [lm_head]` in the training config, per TRL's own suggested fix.
+
+### Next
+Re-run training with the fix.

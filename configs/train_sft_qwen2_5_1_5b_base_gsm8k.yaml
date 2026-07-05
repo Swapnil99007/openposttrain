@@ -5,12 +5,15 @@ data:
   train_path: data/sft/gsm8k_train_full.jsonl
   validation_path: data/sft/gsm8k_val_full.jsonl
 
-# Same gentler LoRA settings as v2/v3 -- only the base model is different.
+# Same gentler LoRA settings as v2/v3, plus modules_to_save: [lm_head] --
+# required because chat_template_path below adds tokens the base tokenizer
+# didn't already have; without this the run crashes (see PROJECT_LOG.md).
 lora:
   r: 8
   alpha: 16
   dropout: 0.05
   target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  modules_to_save: [lm_head]
 
 training:
   output_dir: outputs/sft/qwen2_5_1_5b_base_gsm8k_lora
@@ -26,9 +29,9 @@ training:
   bf16: true
   seed: 42
   report_to: none
-  # Confirmed empirically (not just from docs) that Qwen/Qwen2.5-1.5B's own
-  # tokenizer has no chat template -- borrow the Instruct sibling's template
-  # and align the EOS token to it, per TRL's documented pattern for this
-  # exact scenario.
+  # Borrow the Instruct sibling's chat template and align the EOS token to
+  # it, per TRL's documented pattern for base models. (Whether the base
+  # tokenizer already had an equivalent template is unclear -- TRL detected
+  # new tokens either way when cloning this, hence modules_to_save above.)
   chat_template_path: Qwen/Qwen2.5-1.5B-Instruct
   eos_token: "<|im_end|>"

@@ -38,6 +38,12 @@ def build_lora_config(lora_config: dict) -> LoraConfig:
             "target_modules",
             ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
         ),
+        # Needed when chat_template_path adds tokens the base tokenizer didn't
+        # already have registered -- without this, the new tokens' embeddings
+        # (in lm_head) aren't trainable, which both degrades generation
+        # quality and (with tied embeddings) crashes TRL's chunked loss path
+        # entirely (AttributeError on a PEFT wrapper missing `.bias`).
+        modules_to_save=lora_config.get("modules_to_save"),
         task_type="CAUSAL_LM",
     )
 
