@@ -13,7 +13,7 @@ The goal is to build practical experience with:
 - later preference tuning / DPO
 
 ## Current Stage
-The project has completed: baseline evaluation, GSM8K SFT data preparation, and LoRA SFT training (verified working, adapter saved). Next is base-vs-SFT evaluation.
+Baseline eval, SFT data prep, LoRA SFT training, and base-vs-SFT evaluation are all done. The SFT adapter regressed GSM8K accuracy (70% -> 45%) despite fixing formatting -- diagnosing/fixing this (likely: training set too small) is the open next step.
 
 ## Current Baseline
 
@@ -83,7 +83,17 @@ Trained a LoRA adapter (`outputs/sft/qwen2_5_1_5b_gsm8k_lora`) on `Qwen/Qwen2.5-
 
 Overfitting after epoch 1 on this small dataset; `load_best_model_at_end` keeps the epoch-1 checkpoint automatically (verified via `md5sum`). `mean_token_accuracy` is a training proxy, not GSM8K exact-match accuracy.
 
+## Base vs SFT Result
+
+| | Baseline | SFT adapter |
+|---|---:|---:|
+| accuracy | 0.70 | 0.45 |
+| format_violation | 18 | 3 |
+| wrong_numeric_answer | 12 | 52 |
+
+SFT fixed formatting compliance but substantially regressed reasoning accuracy. Likely cause: 200 training examples is too small/narrow to generalize from -- the adapter overfit formatting conventions while distorting general arithmetic reasoning (see Decision 020).
+
 ## Next Step
-Stage 17: add PEFT adapter-loading support to the eval pipeline, then run the SFT adapter against the same GSM8K `test[0:100]` slice used for the Qwen baseline for a real base-vs-SFT accuracy comparison.
+Open decision: scale up the SFT training set, reduce LoRA aggressiveness (lower rank/learning rate), and/or rule out an fp16-eval vs bf16-train dtype mismatch as a confound -- then re-run the same controlled comparison.
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.

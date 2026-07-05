@@ -347,3 +347,26 @@ Re-ran training on RunPod with the fix. Same overfitting shape as before (`eval_
 
 ### Status
 Accepted.
+
+## Decision 020: 200-example LoRA SFT regresses GSM8K accuracy (70% -> 45%)
+
+### Finding
+Running the Stage 16 adapter through the same eval used for the baseline (`configs/eval_gsm8k_qwen2_5_1_5b_sft.yaml`, identical settings to the baseline config except `adapter_path`) gave **0.45 accuracy, down from the 0.70 baseline**.
+
+Failure-type breakdown tells a specific story, not just "worse":
+
+| | Baseline | SFT adapter |
+|---|---:|---:|
+| correct | 70 | 45 |
+| format_violation | 18 | 3 |
+| wrong_numeric_answer | 12 | 52 |
+
+Formatting compliance improved sharply (18 -> 3). Actual reasoning got much worse (12 -> 52 wrong numeric answers), including basic arithmetic slips (e.g. example 2: model computes `180 x 2 = 360` instead of `180 x 3 = 540`) that look more elementary than the baseline's failures.
+
+### Hypothesis
+200 training examples is too small and narrow. LoRA applied broadly (all attention + MLP projections) at `lr=2e-4` had enough signal to learn the `Final Answer: N` formatting convention, but not enough diversity to reinforce general arithmetic reasoning -- and likely nudged shared weights in ways that hurt the base model's existing math ability. This is consistent with the overfitting already observed in training metrics (Decision 019): same root cause, now confirmed on the real downstream benchmark rather than just the training-loss proxy.
+
+Secondary confound worth ruling out (not expected to explain the full gap): eval loads the base model in fp16, training ran in bf16.
+
+### Status
+Open -- see PROJECT_LOG.md 2026-07-04 (base-vs-SFT eval) for next-step options under discussion.

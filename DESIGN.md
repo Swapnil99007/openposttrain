@@ -393,4 +393,22 @@ Important caveat: `mean_token_accuracy` is a token-level training metric, not GS
 
 ### Next Design Step
 
-Add PEFT adapter-loading support to the model wrapper and eval pipeline, then run the same GSM8K `test[0:100]` slice used for the Qwen baseline against the SFT adapter for a real accuracy comparison.
+Done -- see "Base vs SFT Evaluation" below.
+
+## Base vs SFT Evaluation
+
+`HFModel` (`src/openposttrain/models/hf_model.py`) takes an optional `adapter_path` and wraps the base model with `PeftModel.from_pretrained` when set. `scripts/run_eval.py` threads this through from the model config. `configs/eval_gsm8k_qwen2_5_1_5b_sft.yaml` mirrors the baseline config exactly except for `adapter_path`, isolating the adapter as the only variable (Decision 012).
+
+### Current result
+
+| | Baseline | SFT adapter |
+|---|---:|---:|
+| accuracy | 0.70 | 0.45 |
+| format_violation | 18 | 3 |
+| wrong_numeric_answer | 12 | 52 |
+
+SFT improved formatting compliance but substantially regressed actual reasoning accuracy -- a net accuracy drop. See Decision 020 for the full analysis and root-cause hypothesis (200-example training set too small/narrow).
+
+### Next Design Step
+
+Open question: scale up the SFT training set, reduce LoRA aggressiveness, and/or rule out an fp16-eval/bf16-train dtype confound, then re-run this same controlled comparison.

@@ -339,3 +339,30 @@ Run LoRA SFT training on the prepared GSM8K data and get a working adapter.
 
 ### Next
 Stage 17: add adapter-loading support to the eval pipeline and run the SFT adapter against the same GSM8K `test[0:100]` slice used for the Qwen baseline, to get a real base-vs-SFT accuracy comparison.
+
+## 2026-07-04 (base-vs-SFT eval)
+
+### Goal
+Get a real, controlled base-vs-SFT accuracy comparison using the same GSM8K `test[0:100]` slice as the baseline.
+
+### What I did
+- Added `adapter_path` support to `HFModel` (wraps the base model with `PeftModel.from_pretrained`) and threaded it through `scripts/run_eval.py` and the leaderboard row.
+- Added `configs/eval_gsm8k_qwen2_5_1_5b_sft.yaml`, identical to the baseline config except for `adapter_path`, so any accuracy difference is attributable to the adapter (Decision 012).
+- Ran it on RunPod against the Stage 16 adapter.
+
+### Results
+| | Baseline | SFT adapter |
+|---|---:|---:|
+| accuracy | 0.70 | 0.45 |
+| correct | 70 | 45 |
+| format_violation | 18 | 3 |
+| wrong_numeric_answer | 12 | 52 |
+
+### Key Finding
+SFT **improved** answer formatting (18 -> 3 format violations) but **regressed** actual reasoning accuracy substantially (12 -> 52 wrong numeric answers), for a net accuracy drop from 70% to 45%. See Decision 020 for the full breakdown and root-cause hypothesis (200 training examples is too small/narrow; the adapter likely overfit formatting conventions while distorting general arithmetic reasoning).
+
+### Decision
+Not yet made -- see Decision 020 (status: Open). Considering: (a) scale up the SFT training set well beyond 200 examples, (b) reduce LoRA aggressiveness (lower rank/learning rate), (c) rule out the fp16-eval vs bf16-train dtype mismatch as a confound first since it's cheap to test.
+
+### Next
+Decide and execute a fix, then re-run the same controlled baseline-vs-SFT comparison to check whether it closes the gap.

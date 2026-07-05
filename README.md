@@ -248,6 +248,22 @@ This trains a LoRA adapter on top of `Qwen/Qwen2.5-1.5B-Instruct` using the prep
 
 Eval loss rises after epoch 1 (overfitting on the small 200-example set), so the trainer is configured to automatically keep the best (epoch 1) checkpoint rather than the last one.
 
+## Evaluate the SFT Adapter (Base vs SFT)
+
+Same eval, same 100 test examples, only difference is `adapter_path`:
+
+    PYTHONPATH=src python scripts/run_eval.py --config configs/eval_gsm8k_qwen2_5_1_5b_sft.yaml
+
+### Current Result
+
+| | Baseline | SFT adapter |
+|---|---:|---:|
+| accuracy | 0.70 | 0.45 |
+| format_violation | 18 | 3 |
+| wrong_numeric_answer | 12 | 52 |
+
+SFT fixed formatting but regressed reasoning accuracy overall -- likely because 200 training examples is too small/narrow for the model to generalize rather than overfit. See `DECISIONS.md` (Decision 020) for the full analysis.
+
 ### Next Step
 
-Stage 17: evaluate the SFT adapter against the same GSM8K `test[0:100]` slice used for the Qwen baseline, for a real base-vs-SFT accuracy comparison.
+Open: scale up the SFT training data, reduce LoRA aggressiveness, and/or rule out a training/eval dtype mismatch, then re-run this comparison.
