@@ -1,0 +1,24 @@
+run_name: gsm8k_qwen2_5_1_5b_instruct_sft_lora_v3_bf16_512_tokens
+
+# Same as the v2 bf16 eval config, pointed at the v3 adapter (trained on
+# ~7000 examples instead of 1500). Using bf16 directly since Decision 020
+# already established that fp16 eval meaningfully understates adapter
+# accuracy relative to bf16 (the precision training actually used).
+model:
+  name: Qwen/Qwen2.5-1.5B-Instruct
+  adapter_path: outputs/sft/qwen2_5_1_5b_gsm8k_lora_v3
+  dtype: bfloat16
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

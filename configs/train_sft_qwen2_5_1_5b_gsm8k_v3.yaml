@@ -1,0 +1,28 @@
+model:
+  name: Qwen/Qwen2.5-1.5B-Instruct
+
+data:
+  train_path: data/sft/gsm8k_train_full.jsonl
+  validation_path: data/sft/gsm8k_val_full.jsonl
+
+# Same gentler LoRA settings as v2 (Decision 020) -- only the data size changed.
+lora:
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+training:
+  output_dir: outputs/sft/qwen2_5_1_5b_gsm8k_lora_v3
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0001
+  max_length: 768
+  logging_steps: 20
+  eval_strategy: epoch
+  save_strategy: epoch
+  bf16: true
+  seed: 42
+  report_to: none

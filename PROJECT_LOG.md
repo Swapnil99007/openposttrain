@@ -409,3 +409,14 @@ Baseline in bf16: **0.70** -- identical to the original fp16 baseline. The base 
 
 ### Next
 Open decision: keep iterating on SFT (candidates: even more training data, GSM8K's terse gold-solution style may itself be a poor SFT target, further LoRA gentling) vs. accept this as a documented finding and move forward to other pipeline stages (DPO, synthetic data, etc.), returning to SFT quality later if time allows.
+
+## 2026-07-05 (SFT retry v3: full GSM8K train set)
+
+### Goal
+Test whether data quantity is still the limiting factor -- scale from 1500 to ~7000 training examples (nearly all of GSM8K's train split, which has 7473 rows), keeping the same gentler LoRA settings as v2 and evaluating directly in bf16 (already established as necessary for a fair comparison).
+
+### What I did
+Added `configs/data_gsm8k_sft_full.yaml` (train_limit 7000, validation_limit 300), `configs/train_sft_qwen2_5_1_5b_gsm8k_v3.yaml` (same LoRA/training hyperparameters as v2, new data paths), `configs/eval_gsm8k_qwen2_5_1_5b_sft_v3_bf16.yaml` (bf16 directly, skipping the fp16 rediscovery since that confound is already understood).
+
+### Next
+Run data prep, training (expect ~45-60 min given 1500 examples took ~13 min for 3 epochs), and bf16 eval on RunPod. Compare against the controlled baseline of 0.70.
