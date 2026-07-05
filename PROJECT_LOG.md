@@ -451,3 +451,17 @@ Test whether the SFT regression was fundamentally caused by fine-tuning an alrea
 
 ### Next
 Run the base-model zero-shot baseline first (cheap, no training) to see actual behavior (does it follow the chat template/format at all?) before committing to a full training run.
+
+### Results
+Accuracy: 0.03 (3 correct, 25 no_numeric_answer, 0 format_violation, 72 wrong_numeric_answer). Eval took ~15 min (2x the Instruct model's ~7 min) -- consistent with rarely hitting a natural stop.
+
+### Key Finding -- the 0.03 number is not trustworthy as-is
+Inspecting raw completions (`inspect_latest_failures.py`) showed the base model echoes the prompt back verbatim, then degenerates into repeating a single junk token (`afone`, `aload`, `acey`) for the rest of the 512-token budget, or in one case loops the entire prompt text repeatedly. It never actually attempts the problem. This is a well-known greedy-decoding pathology for base (non-chat-tuned) models with no natural turn-boundary signal.
+
+This also exposed a real evaluator bug: `classify_result`'s `format_violation` check just searches for the substring `"final answer"` anywhere in the output. Since our own prompt text contains that literal phrase ("write the final answer in this exact format: Final Answer: <number>"), echoing the prompt trivially satisfies the check -- which is why `format_violation` showed 0 even though the model never produced a real answer. The "wrong" numbers extracted were just numbers pulled from the restated problem text (e.g. "$2 per fresh duck egg" -> extracted "2.0"), not anything the model computed. Same category of mistake as the max_new_tokens truncation issue (Decision 017): don't judge a model by a broken measurement setup.
+
+### Decision
+Test whether a standard decoding fix -- `repetition_penalty=1.3`, `no_repeat_ngram_size=3` -- changes the picture before designing the training run around this number. Added these as opt-in parameters to `HFModel.generate()` (threaded through `run_gsm8k_eval` and `run_eval.py`), defaulting to `None` so existing instruct-model configs are unaffected. New config: `configs/eval_gsm8k_qwen2_5_1_5b_base_reppen.yaml`.
+
+### Next
+Run the repetition-penalty config and compare against the 0.03 result and against the raw completions to confirm whether the model now actually attempts problems.

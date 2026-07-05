@@ -60,6 +60,8 @@ def main():
         max_new_tokens=model_config.get("max_new_tokens", 256),
         temperature=model_config.get("temperature", 0.0),
         top_p=model_config.get("top_p", 1.0),
+        repetition_penalty=model_config.get("repetition_penalty"),
+        no_repeat_ngram_size=model_config.get("no_repeat_ngram_size"),
     )
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -87,6 +89,8 @@ def main():
         "prompt_path": prompt_path,
         "adapter_path": model_config.get("adapter_path"),
         "dtype": model_config.get("dtype"),
+        "repetition_penalty": model_config.get("repetition_penalty"),
+        "no_repeat_ngram_size": model_config.get("no_repeat_ngram_size"),
         "config_path": args.config,
         "output_dir": output_dir,
     }

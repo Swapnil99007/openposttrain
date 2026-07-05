@@ -48,6 +48,8 @@ class HFModel:
         max_new_tokens: int = 256,
         temperature: float = 0.0,
         top_p: float = 1.0,
+        repetition_penalty: float | None = None,
+        no_repeat_ngram_size: int | None = None,
     ) -> str:
         messages = [
             {
@@ -78,6 +80,16 @@ class HFModel:
         if do_sample:
             generation_kwargs["temperature"] = temperature
             generation_kwargs["top_p"] = top_p
+
+        # Base (non-chat-tuned) models have no natural turn-boundary signal
+        # and can degenerate into repeating a single token under greedy
+        # decoding. These are opt-in (None = unchanged behavior) so existing
+        # instruct-model eval configs aren't retroactively affected.
+        if repetition_penalty is not None:
+            generation_kwargs["repetition_penalty"] = repetition_penalty
+
+        if no_repeat_ngram_size is not None:
+            generation_kwargs["no_repeat_ngram_size"] = no_repeat_ngram_size
 
         with torch.no_grad():
             outputs = self.model.generate(

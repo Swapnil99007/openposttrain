@@ -95,6 +95,8 @@ def run_gsm8k_eval(
     max_new_tokens: int = 256,
     temperature: float = 0.0,
     top_p: float = 1.0,
+    repetition_penalty: float | None = None,
+    no_repeat_ngram_size: int | None = None,
 ):
     dataset = load_dataset("openai/gsm8k", "main", split=split)
 
@@ -113,6 +115,8 @@ def run_gsm8k_eval(
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_p=top_p,
+            repetition_penalty=repetition_penalty,
+            no_repeat_ngram_size=no_repeat_ngram_size,
         )
 
         extracted_gold = extract_gsm8k_gold(gold_answer)
