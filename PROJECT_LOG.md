@@ -401,3 +401,11 @@ This result compares a bf16 adapter run against the original **fp16** baseline (
 
 ### Next
 Run the bf16 baseline and compare bf16-vs-bf16 (adapter 0.55 vs. whatever the bf16 baseline turns out to be) for the real, controlled answer on whether this SFT adapter helps or hurts.
+
+### Result
+Baseline in bf16: **0.70** -- identical to the original fp16 baseline. The base model is numerically robust to precision; the adapter is not (0.49 fp16 -> 0.55 bf16).
+
+**Final controlled comparison: baseline 0.70 vs. SFT v2 adapter 0.55 -- a real 15-point regression.** More data + gentler LoRA + precision control together closed some of the gap (uncontrolled comparison looked like a 25-point regression) but did not close it. This is a genuine, documented negative result, not a bug -- three rounds of diagnosis (overfitting fix, data scale-up + gentler LoRA, precision control) each ruled something in or out and each was verified with real numbers, not assumed.
+
+### Next
+Open decision: keep iterating on SFT (candidates: even more training data, GSM8K's terse gold-solution style may itself be a poor SFT target, further LoRA gentling) vs. accept this as a documented finding and move forward to other pipeline stages (DPO, synthetic data, etc.), returning to SFT quality later if time allows.

@@ -411,4 +411,6 @@ SFT improved formatting compliance but substantially regressed actual reasoning 
 
 ### Next Design Step
 
-Open question: scale up the SFT training set, reduce LoRA aggressiveness, and/or rule out an fp16-eval/bf16-train dtype confound, then re-run this same controlled comparison.
+Done -- three rounds of diagnosis completed: overfitting fix (Decision 019), data scale-up + gentler LoRA (v2, Decision 020), and eval dtype control (fp16 vs bf16, also Decision 020). Final controlled result (bf16 vs bf16): baseline 0.70, SFT adapter 0.55 -- a real 15-point regression that survived all three fixes. `HFModel` now supports an optional `dtype` override (`float16`/`bfloat16`/`float32`) for exactly this kind of precision-control experiment.
+
+Open decision: keep iterating on SFT quality (more/better training data) vs. move forward to other pipeline stages and treat this as a documented finding to revisit later.

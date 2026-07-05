@@ -385,3 +385,16 @@ Isolate the fp16(eval)/bf16(train) precision mismatch as a possible contributor 
 v2 adapter, bf16 eval: **0.55 accuracy**, up from 0.49 in fp16 -- a real +6-point effect from matching eval precision to training precision. Confirms the mismatch was a genuine contributor.
 
 But this now compares a bf16 adapter run against the original **fp16** baseline (0.70) -- mixing precisions the other way. Added `configs/eval_gsm8k_qwen2_5_1_5b_bf16.yaml` (baseline, no adapter, bf16) to get a consistent same-precision comparison before drawing conclusions about the adapter's true effect.
+
+### Final Controlled Result (bf16 vs bf16)
+
+Baseline (no adapter) scores **identically** in fp16 and bf16 (0.70 both) -- the base model is numerically robust to precision. The adapter is not (0.49 fp16 -> 0.55 bf16) -- itself a symptom that the fine-tuned model is more numerically fragile than the base model, consistent with everything else observed.
+
+| | Baseline (bf16) | SFT v2 adapter (bf16) |
+|---|---:|---:|
+| accuracy | 0.70 | 0.55 |
+
+A real, controlled **15-point regression**. Smaller than the uncontrolled fp16 comparison suggested (which conflated a real precision confound with the adapter's actual effect), but still a genuine regression -- more data and gentler LoRA reduced the damage (70->45 uncontrolled, then 70->55 controlled) but did not close the gap.
+
+### Status
+Accepted as a documented negative result for now. Remaining candidate causes, not yet tested: GSM8K's terse gold-solution text may be a poor SFT target for a model that already reasons more carefully via its own instruction-tuning (training on terser text could be making it skip verification steps); the training set may still be too small/narrow even at 1500 examples; further LoRA gentling. Decision on whether to keep iterating on SFT vs. move forward and treat this as a documented finding is open -- see PROJECT_LOG.md 2026-07-05.

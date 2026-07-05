@@ -262,8 +262,14 @@ Same eval, same 100 test examples, only difference is `adapter_path`:
 | format_violation | 18 | 3 |
 | wrong_numeric_answer | 12 | 52 |
 
-SFT fixed formatting but regressed reasoning accuracy overall -- likely because 200 training examples is too small/narrow for the model to generalize rather than overfit. See `DECISIONS.md` (Decision 020) for the full analysis.
+SFT fixed formatting but regressed reasoning accuracy overall. After scaling up training data (200 -> 1500 examples), using gentler LoRA settings, and controlling for an fp16-eval/bf16-train precision mismatch (base model is precision-robust, 0.70 either way; the adapter is not), the final controlled comparison is:
+
+| | Baseline (bf16) | SFT adapter (bf16) |
+|---|---:|---:|
+| accuracy | 0.70 | 0.55 |
+
+A real 15-point regression that survived three rounds of fixes. See `DECISIONS.md` (Decision 020) for the full diagnostic history.
 
 ### Next Step
 
-Open: scale up the SFT training data, reduce LoRA aggressiveness, and/or rule out a training/eval dtype mismatch, then re-run this comparison.
+Open decision: keep iterating on SFT data quality/quantity, or move forward to other pipeline stages and revisit later.
