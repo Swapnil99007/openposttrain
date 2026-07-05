@@ -493,3 +493,12 @@ Added `modules_to_save` passthrough to `build_lora_config` (`src/openposttrain/t
 
 ### Next
 Re-run training with the fix.
+
+### Results (fix didn't work -- same crash)
+Retried with `modules_to_save: [lm_head]`. Same crash, same line (`AttributeError: 'TrainableTokensWrapper' object has no attribute 'bias'`). The earlier "lm_head is not in modules_to_save" warning was gone (confirming our setting was applied), but a *different* PEFT wrapper (`TrainableTokensWrapper`, PEFT's separate mechanism for handling embeddings for newly-added tokens) still hit the same code path -- it takes precedence over `modules_to_save` for the tied embedding/lm_head tensor. The warning about `tie_word_embeddings=True` + `ensure_weight_tying` links to an open PEFT GitHub issue (huggingface/peft#2777) describing exactly this kind of complication. This looks like a real, currently-unresolved library limitation, not a config mistake.
+
+### Decision
+Sidestep the chat-template approach entirely instead of continuing to chase this interaction. Added `to_plain_prompt_completion()` and a `conversational` flag to `load_sft_dataset()` in `src/openposttrain/training/sft_lora.py` -- trains on plain text (prompt/completion as strings, not chat messages), so TRL never needs to apply or clone a chat template, and no new tokens are ever introduced. This also better matches how `HFModel.generate()` already evaluates this tokenizer (no chat template -> raw prompt text fallback), so train and eval are now naturally consistent. Removed `chat_template_path`/`eos_token`/`modules_to_save` from the training config.
+
+### Next
+Re-run training with the plain-text (non-conversational) format.

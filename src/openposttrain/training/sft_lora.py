@@ -21,12 +21,35 @@ def to_prompt_completion(example: dict) -> dict:
     }
 
 
-def load_sft_dataset(train_path: str, validation_path: str) -> DatasetDict:
+def to_plain_prompt_completion(example: dict) -> dict:
+    """
+    Standard (non-conversational) prompt-completion: plain strings instead
+    of chat messages, so TRL never needs to apply a chat template at all.
+    For base models with no chat template of their own, borrowing one
+    (chat_template_path) adds new tokens, which hits an unresolved PEFT/TRL
+    interaction with tied embeddings (TrainableTokensWrapper lacks .bias in
+    TRL's chunked loss -- see PROJECT_LOG.md). This format sidesteps that
+    entirely, and matches how HFModel.generate() already evaluates this
+    tokenizer (raw prompt text, no chat wrapping).
+    """
+    messages = example["messages"]
+    return {
+        "prompt": messages[0]["content"],
+        "completion": messages[1]["content"],
+    }
+
+
+def load_sft_dataset(
+    train_path: str,
+    validation_path: str,
+    conversational: bool = True,
+) -> DatasetDict:
     dataset = load_dataset(
         "json",
         data_files={"train": train_path, "validation": validation_path},
     )
-    return dataset.map(to_prompt_completion, remove_columns=dataset["train"].column_names)
+    convert_fn = to_prompt_completion if conversational else to_plain_prompt_completion
+    return dataset.map(convert_fn, remove_columns=dataset["train"].column_names)
 
 
 def build_lora_config(lora_config: dict) -> LoraConfig:

@@ -1,19 +1,24 @@
 model:
   name: Qwen/Qwen2.5-1.5B
 
+# conversational: false -> plain text prompt/completion, no chat template.
+# Two attempts at borrowing the Instruct model's chat template
+# (chat_template_path) crashed on an unresolved PEFT/TRL interaction between
+# new tokens and tied embeddings (see PROJECT_LOG.md). Training on plain
+# text avoids that entirely, and matches how HFModel.generate() already
+# evaluates this tokenizer (no chat template -> raw prompt text fallback).
 data:
   train_path: data/sft/gsm8k_train_full.jsonl
   validation_path: data/sft/gsm8k_val_full.jsonl
+  conversational: false
 
-# Same gentler LoRA settings as v2/v3, plus modules_to_save: [lm_head] --
-# required because chat_template_path below adds tokens the base tokenizer
-# didn't already have; without this the run crashes (see PROJECT_LOG.md).
+# Same gentler LoRA settings as v2/v3. No modules_to_save needed now --
+# plain-text training adds no new tokens.
 lora:
   r: 8
   alpha: 16
   dropout: 0.05
   target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
-  modules_to_save: [lm_head]
 
 training:
   output_dir: outputs/sft/qwen2_5_1_5b_base_gsm8k_lora
@@ -29,9 +34,3 @@ training:
   bf16: true
   seed: 42
   report_to: none
-  # Borrow the Instruct sibling's chat template and align the EOS token to
-  # it, per TRL's documented pattern for base models. (Whether the base
-  # tokenizer already had an equivalent template is unclear -- TRL detected
-  # new tokens either way when cloning this, hence modules_to_save above.)
-  chat_template_path: Qwen/Qwen2.5-1.5B-Instruct
-  eos_token: "<|im_end|>"

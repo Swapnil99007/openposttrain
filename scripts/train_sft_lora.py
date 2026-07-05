@@ -28,6 +28,7 @@ def main():
     dataset = load_sft_dataset(
         train_path=data_config["train_path"],
         validation_path=data_config["validation_path"],
+        conversational=data_config.get("conversational", True),
     )
 
     trainer = SFTTrainer(
