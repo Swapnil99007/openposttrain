@@ -262,14 +262,17 @@ Same eval, same 100 test examples, only difference is `adapter_path`:
 | format_violation | 18 | 3 |
 | wrong_numeric_answer | 12 | 52 |
 
-SFT fixed formatting but regressed reasoning accuracy overall. After scaling up training data (200 -> 1500 examples), using gentler LoRA settings, and controlling for an fp16-eval/bf16-train precision mismatch (base model is precision-robust, 0.70 either way; the adapter is not), the final controlled comparison is:
+SFT fixed formatting but regressed reasoning accuracy overall. Diagnosed across four rounds (overfitting fix, data scale-up + gentler LoRA, precision control, full-dataset scale-up):
 
-| | Baseline (bf16) | SFT adapter (bf16) |
-|---|---:|---:|
-| accuracy | 0.70 | 0.55 |
+| Experiment | Train examples | Eval dtype | Accuracy |
+|---|---:|---|---:|
+| Baseline | - | fp16/bf16 | 0.70 |
+| v1 | 200 | fp16 | 0.45 |
+| v2 | 1500 | bf16 | 0.55 |
+| v3 | 7000 | bf16 | 0.57 |
 
-A real 15-point regression that survived three rounds of fixes. See `DECISIONS.md` (Decision 020) for the full diagnostic history.
+Data quantity clearly hit diminishing returns (1500->7000 examples only gained +2pts) -- more GSM8K data alone is unlikely to close the remaining gap. See `DECISIONS.md` (Decision 020) for the full diagnostic history.
 
 ### Next Step
 
-Open decision: keep iterating on SFT data quality/quantity, or move forward to other pipeline stages and revisit later.
+Open decision: try regenerating SFT targets from the base model's own verified-correct reasoning instead of GSM8K's terse gold text, or move forward to other pipeline stages and revisit later.

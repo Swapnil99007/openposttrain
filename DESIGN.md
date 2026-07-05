@@ -411,6 +411,15 @@ SFT improved formatting compliance but substantially regressed actual reasoning 
 
 ### Next Design Step
 
-Done -- three rounds of diagnosis completed: overfitting fix (Decision 019), data scale-up + gentler LoRA (v2, Decision 020), and eval dtype control (fp16 vs bf16, also Decision 020). Final controlled result (bf16 vs bf16): baseline 0.70, SFT adapter 0.55 -- a real 15-point regression that survived all three fixes. `HFModel` now supports an optional `dtype` override (`float16`/`bfloat16`/`float32`) for exactly this kind of precision-control experiment.
+Done -- four rounds of diagnosis completed: overfitting fix (Decision 019), data scale-up + gentler LoRA (v2), eval dtype control (fp16 vs bf16), and full-dataset scale-up (v3, ~7000 examples). Results across all experiments:
 
-Open decision: keep iterating on SFT quality (more/better training data) vs. move forward to other pipeline stages and treat this as a documented finding to revisit later.
+| Experiment | Train examples | Eval dtype | Accuracy |
+|---|---:|---|---:|
+| Baseline | - | fp16/bf16 | 0.70 |
+| v1 | 200 | fp16 | 0.45 |
+| v2 | 1500 | bf16 | 0.55 |
+| v3 | 7000 | bf16 | 0.57 |
+
+Data quantity shows clear diminishing returns (1500->7000 only gained +2pts), meaning quantity alone is unlikely to close the remaining ~13-point gap. `HFModel` now supports an optional `dtype` override (`float16`/`bfloat16`/`float32`) for precision-control experiments like this one.
+
+Open decision: try regenerating SFT targets from the base model's own verified-correct reasoning instead of GSM8K's terse gold text, vs. move forward to other pipeline stages and treat this as a documented finding to revisit later.

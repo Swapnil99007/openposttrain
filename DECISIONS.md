@@ -396,5 +396,18 @@ Baseline (no adapter) scores **identically** in fp16 and bf16 (0.70 both) -- the
 
 A real, controlled **15-point regression**. Smaller than the uncontrolled fp16 comparison suggested (which conflated a real precision confound with the adapter's actual effect), but still a genuine regression -- more data and gentler LoRA reduced the damage (70->45 uncontrolled, then 70->55 controlled) but did not close the gap.
 
+### v3 Result (full GSM8K train set, ~7000 examples)
+Accuracy: **0.57** -- only +2 points over v2's 0.55, despite 4.67x more training data.
+
+| Experiment | Train examples | LoRA r/alpha/lr | Eval dtype | Accuracy |
+|---|---:|---|---|---:|
+| Baseline (no adapter) | - | - | fp16 or bf16 | 0.70 |
+| v1 | 200 | 16/32/2e-4 | fp16 | 0.45 |
+| v2 | 1500 | 8/16/1e-4 | fp16 | 0.49 |
+| v2 | 1500 | 8/16/1e-4 | bf16 | 0.55 |
+| v3 | 7000 | 8/16/1e-4 | bf16 | 0.57 |
+
+Data quantity shows clear diminishing returns: 200->1500 (+4pts), then 1500->7000, a much bigger jump, (+2pts). The precision fix alone (+6pts) mattered more than 5500 additional training examples. Data quantity is very unlikely to close the remaining ~13-point gap on its own.
+
 ### Status
-Accepted as a documented negative result for now. Remaining candidate causes, not yet tested: GSM8K's terse gold-solution text may be a poor SFT target for a model that already reasons more carefully via its own instruction-tuning (training on terser text could be making it skip verification steps); the training set may still be too small/narrow even at 1500 examples; further LoRA gentling. Decision on whether to keep iterating on SFT vs. move forward and treat this as a documented finding is open -- see PROJECT_LOG.md 2026-07-05.
+Accepted as a documented negative result. Remaining candidate cause, not yet tested: GSM8K's terse gold-solution text may be a poor SFT target for a model that already reasons more carefully via its own instruction-tuning -- training on terser text could be making it skip verification steps it would otherwise do. Testing this would mean regenerating SFT targets from the base model's own verified-correct reasoning (self-distillation) rather than GSM8K's gold text. Decision on whether to pursue that vs. move forward and treat the current result as a documented finding is open -- see PROJECT_LOG.md 2026-07-05.

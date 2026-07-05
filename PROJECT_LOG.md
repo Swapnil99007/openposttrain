@@ -420,3 +420,22 @@ Added `configs/data_gsm8k_sft_full.yaml` (train_limit 7000, validation_limit 300
 
 ### Next
 Run data prep, training (expect ~45-60 min given 1500 examples took ~13 min for 3 epochs), and bf16 eval on RunPod. Compare against the controlled baseline of 0.70.
+
+### Results
+Accuracy: **0.57** (train_runtime ~60 min, 1314 steps). Training curve shows the same mild overfitting shape as v2 (`eval_loss`: 0.4276 -> 0.4305 -> 0.46), best checkpoint at epoch 1.
+
+### Key Finding
+Only +2 points over v2 (0.55), despite 4.67x more training data. Full picture across all experiments:
+
+| Experiment | Train examples | LoRA r/alpha/lr | Eval dtype | Accuracy |
+|---|---:|---|---|---:|
+| Baseline (no adapter) | - | - | fp16 or bf16 | 0.70 |
+| v1 | 200 | 16/32/2e-4 | fp16 | 0.45 |
+| v2 | 1500 | 8/16/1e-4 | fp16 | 0.49 |
+| v2 | 1500 | 8/16/1e-4 | bf16 | 0.55 |
+| v3 | 7000 | 8/16/1e-4 | bf16 | 0.57 |
+
+Data quantity shows clear diminishing returns (200->1500: +4pts; 1500->7000, a much bigger jump: +2pts). The precision fix alone (+6pts) mattered more than 5500 additional training examples. Data quantity is very unlikely to close the remaining ~13-point gap on its own.
+
+### Decision
+Not yet made -- most plausible remaining lever is GSM8K's terse gold-solution style itself (never tested). Open: try regenerating SFT targets from the base model's own verified-correct reasoning (self-distillation) vs. accept the current result as a documented, rigorously-diagnosed finding and move forward to other pipeline stages.
