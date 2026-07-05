@@ -1,0 +1,25 @@
+run_name: gsm8k_qwen2_5_1_5b_base_sft_lora_512_tokens
+
+# Same as eval_gsm8k_qwen2_5_1_5b_base_sft_reppen.yaml but WITHOUT
+# repetition_penalty/no_repeat_ngram_size. Testing whether those settings
+# (tuned to fix the raw base model's degenerate-repetition problem) are
+# actually hurting the SFT'd model, which may legitimately need to reuse
+# numbers/phrasing during correct step-by-step reasoning.
+model:
+  name: Qwen/Qwen2.5-1.5B
+  adapter_path: outputs/sft/qwen2_5_1_5b_base_gsm8k_lora
+  dtype: bfloat16
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv
