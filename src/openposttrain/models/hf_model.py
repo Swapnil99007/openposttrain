@@ -21,7 +21,13 @@ class HFModel:
         self.model_name = model_name
         self.adapter_path = adapter_path
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        # If training patched in a chat template (e.g. via chat_template_path,
+        # needed for base models with no template of their own), that patch
+        # is saved into the adapter's output directory, not back into the
+        # original base model repo. Load the tokenizer from there when an
+        # adapter is present so eval sees the same template training used.
+        tokenizer_source = adapter_path if adapter_path else model_name
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_source)
 
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token

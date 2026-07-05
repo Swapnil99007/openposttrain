@@ -465,3 +465,19 @@ Test whether a standard decoding fix -- `repetition_penalty=1.3`, `no_repeat_ngr
 
 ### Next
 Run the repetition-penalty config and compare against the 0.03 result and against the raw completions to confirm whether the model now actually attempts problems.
+
+### Results
+Accuracy dropped to **0.00** (0 correct, 76 no_numeric_answer, 23 format_violation, 1 wrong_numeric_answer), and eval time dropped from ~15 min to ~2 min (much shorter completions). Inspected raw completions: mostly just `"afone\n\nafone"` or short degenerate/foreign-script rambling that never resolves to a real answer -- e.g. one completion switches into Chinese characters mid-generation and rambles about payroll systems without ever computing anything.
+
+### Key Finding
+The repetition-penalty fix didn't reveal hidden capability -- it eliminated the repetition loop, but what's underneath is still non-functional. This means the original "3 correct" at 0.03 were very likely coincidental (numbers pulled from repeated garbage or the echoed prompt happening to match gold answers), not real reasoning. **Confirmed: the base model genuinely cannot do this task zero-shot, in any decoding configuration tested.** This is the ideal starting point for demonstrating SFT -- there's no existing capability to fight against.
+
+Also confirmed empirically (contradicting a blanket claim in TRL's own docs) that `Qwen/Qwen2.5-1.5B`'s tokenizer has **no chat template** -- the very first zero-shot completion showed raw unwrapped prompt text with no chat tokens at all, meaning `HFModel.generate()`'s fallback path (`text = prompt`) was used. Good thing this was checked empirically rather than trusted from the doc.
+
+### Decision
+- Training config (`configs/train_sft_qwen2_5_1_5b_base_gsm8k.yaml`) sets `chat_template_path: Qwen/Qwen2.5-1.5B-Instruct` (borrowing the sibling model's template) and `eos_token: "<|im_end|>"`, per TRL's documented pattern.
+- Fixed a related bug this uncovered in `HFModel`: it always loaded the tokenizer from `model_name`, but TRL saves a chat-template patch into the *adapter's* output directory, not back into the base model repo. Eval would have silently used the un-patched (template-less) tokenizer otherwise. Now loads from `adapter_path` when present.
+- After-training eval config (`configs/eval_gsm8k_qwen2_5_1_5b_base_sft_reppen.yaml`) keeps the same `repetition_penalty`/`no_repeat_ngram_size` as the baseline, for a controlled comparison.
+
+### Next
+Regenerate SFT data (fresh RunPod pod, `data/` never persisted), train, and eval. Compare against the 0.00 baseline.

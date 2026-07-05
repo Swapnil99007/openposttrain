@@ -1,0 +1,27 @@
+run_name: gsm8k_qwen2_5_1_5b_base_sft_lora_reppen_512_tokens
+
+# Same decoding settings as eval_gsm8k_qwen2_5_1_5b_base_reppen.yaml (the
+# base-model baseline), only adapter_path added -- keeping repetition_penalty
+# and no_repeat_ngram_size active on both sides of the comparison, even
+# though a well-behaved SFT'd model shouldn't need them, so the two runs are
+# controlled the same way (Decision 012).
+model:
+  name: Qwen/Qwen2.5-1.5B
+  adapter_path: outputs/sft/qwen2_5_1_5b_base_gsm8k_lora
+  dtype: bfloat16
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  repetition_penalty: 1.3
+  no_repeat_ngram_size: 3
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv
