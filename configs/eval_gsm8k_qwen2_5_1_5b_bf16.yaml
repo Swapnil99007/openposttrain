@@ -1,0 +1,25 @@
+run_name: gsm8k_qwen2_5_1_5b_instruct_baseline_bf16_512_tokens
+
+# Same as eval_gsm8k_qwen2_5_1_5b_512.yaml (the original baseline) except
+# dtype: bfloat16. Needed to get an apples-to-apples baseline-vs-SFT
+# comparison at a consistent precision, now that bf16 eval measurably
+# changed the adapter's accuracy (Decision 020) -- comparing a bf16 adapter
+# run against the original fp16 baseline would just be mixing precisions
+# the other way around.
+model:
+  name: Qwen/Qwen2.5-1.5B-Instruct
+  dtype: bfloat16
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

@@ -380,3 +380,8 @@ Failure examples show something more specific than "worse reasoning": several ar
 
 ### Next
 Isolate the fp16(eval)/bf16(train) precision mismatch as a possible contributor before making further training changes -- added `dtype` support to `HFModel`/`run_eval.py` and `configs/eval_gsm8k_qwen2_5_1_5b_sft_v2_bf16.yaml` (same v2 adapter, eval in bf16 instead of fp16). Cheap to test, and the incoherent-output pattern is consistent with a numerics artifact compounding over long greedy-decoded generations, not just with a data/capacity problem.
+
+### bf16 Eval Result -- confirmed, but not the whole gap
+v2 adapter, bf16 eval: **0.55 accuracy**, up from 0.49 in fp16 -- a real +6-point effect from matching eval precision to training precision. Confirms the mismatch was a genuine contributor.
+
+But this now compares a bf16 adapter run against the original **fp16** baseline (0.70) -- mixing precisions the other way. Added `configs/eval_gsm8k_qwen2_5_1_5b_bf16.yaml` (baseline, no adapter, bf16) to get a consistent same-precision comparison before drawing conclusions about the adapter's true effect.

@@ -387,3 +387,17 @@ Before making further training changes, isolate the fp16(eval)/bf16(train) preci
 
 ### Next
 Run `configs/eval_gsm8k_qwen2_5_1_5b_sft_v2_bf16.yaml` and compare accuracy to the fp16 v2 result (0.49). If bf16 closes a meaningful part of the gap, precision mismatch is a real contributor. If accuracy is essentially unchanged, rule it out and look harder at training data style/quality instead.
+
+## 2026-07-05 (bf16 eval result + apples-to-apples control)
+
+### Goal
+Check whether the fp16(eval)/bf16(train) mismatch was a real contributor to the accuracy gap.
+
+### Results
+v2 adapter, bf16 eval: 0.55 accuracy (up from 0.49 in fp16) -- a real +6-point effect. Confirmed as a genuine contributor, not a dead end.
+
+### Issue Found
+This result compares a bf16 adapter run against the original **fp16** baseline (0.70), which mixes precision the other way. Added `configs/eval_gsm8k_qwen2_5_1_5b_bf16.yaml` (baseline, no adapter, bf16) so the final comparison holds precision constant on both sides.
+
+### Next
+Run the bf16 baseline and compare bf16-vs-bf16 (adapter 0.55 vs. whatever the bf16 baseline turns out to be) for the real, controlled answer on whether this SFT adapter helps or hurts.
