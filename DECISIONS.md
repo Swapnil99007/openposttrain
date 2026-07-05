@@ -428,6 +428,17 @@ Decision 020 established that fine-tuning the already-instruction-tuned Instruct
 
 ### Final Result
 
+All four runs in the diagnostic path, for the full picture:
+
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base zero-shot | 3 | 25 | 0 | 72 | 0.03 |
+| Base zero-shot + reppen | 0 | 76 | 23 | 1 | 0.00 |
+| Base + SFT + reppen | 1 | 14 | 53 | 32 | 0.01 |
+| **Base + SFT, no reppen** | **37** | 10 | 1 | 52 | **0.37** |
+
+The headline comparison (raw model vs. final result):
+
 | | Raw base model (zero-shot) | Base + SFT |
 |---|---:|---:|
 | accuracy | 0.03 (functionally ~0 -- see above) | **0.37** |

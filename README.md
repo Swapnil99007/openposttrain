@@ -283,9 +283,14 @@ Since fine-tuning the already-tuned Instruct model only ever regressed accuracy,
 
 ### Result
 
-| | Raw base model (zero-shot) | Base + SFT |
-|---|---:|---:|
-| accuracy | 0.03 (functionally ~0 -- see Decision 021) | **0.37** |
+Full diagnostic path (all four runs):
+
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base zero-shot | 3 | 25 | 0 | 72 | 0.03 |
+| Base zero-shot + reppen | 0 | 76 | 23 | 1 | 0.00 |
+| Base + SFT + reppen | 1 | 14 | 53 | 32 | 0.01 |
+| **Base + SFT, no reppen** | **37** | 10 | 1 | 52 | **0.37** |
 
 A real, dramatic, qualitative improvement -- from a model that doesn't attempt the task at all (degenerates into repeating a single junk token) to one that reliably formats answers and mostly reasons correctly. See `DECISIONS.md` (Decision 021) for the full diagnostic path, including two real bugs found and fixed along the way (a PEFT/tied-embeddings crash, and a repetition-penalty setting that was accidentally sabotaging the fine-tuned model's eval).
 
