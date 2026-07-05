@@ -439,3 +439,15 @@ Data quantity shows clear diminishing returns (200->1500: +4pts; 1500->7000, a m
 
 ### Decision
 Not yet made -- most plausible remaining lever is GSM8K's terse gold-solution style itself (never tested). Open: try regenerating SFT targets from the base model's own verified-correct reasoning (self-distillation) vs. accept the current result as a documented, rigorously-diagnosed finding and move forward to other pipeline stages.
+
+## 2026-07-05 (SFT on base model instead of Instruct -- Option A)
+
+### Goal
+Test whether the SFT regression was fundamentally caused by fine-tuning an already-instruction-tuned model with narrower/lower-quality data (overwriting good behavior) rather than teaching a genuinely missing skill. Fix: fine-tune `Qwen/Qwen2.5-1.5B` (base, non-instruct) instead of `-Instruct`, reusing the existing 7000-example GSM8K SFT data and pipeline.
+
+### What I did
+- Added `configs/eval_gsm8k_qwen2_5_1_5b_base.yaml` for a new zero-shot baseline on the base model (bf16 throughout this track, no fp16/bf16 confound this time).
+- Added `eos_token`/`chat_template_path` passthrough to `build_sft_training_args` in `src/openposttrain/training/sft_lora.py` -- per TRL's own docs, Qwen base models ship a chat template already but need `eos_token="<|im_end|>"` set explicitly (their worked example is literally this model).
+
+### Next
+Run the base-model zero-shot baseline first (cheap, no training) to see actual behavior (does it follow the chat template/format at all?) before committing to a full training run.

@@ -1,0 +1,25 @@
+run_name: gsm8k_qwen2_5_1_5b_base_zero_shot_512_tokens
+
+# Zero-shot baseline for the BASE (non-instruct) model, before any SFT.
+# Same benchmark/prompt/decoding settings as the Instruct baseline, so this
+# is a fair "before" number for the base-model SFT experiment (Option A from
+# the SFT-regression discussion in DECISIONS.md Decision 020). Using bf16
+# throughout this new experiment track from the start, since we already
+# learned fp16 vs bf16 can matter for accuracy.
+model:
+  name: Qwen/Qwen2.5-1.5B
+  dtype: bfloat16
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

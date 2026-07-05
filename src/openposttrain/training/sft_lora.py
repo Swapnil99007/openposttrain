@@ -57,6 +57,15 @@ def build_sft_training_args(training_config: dict) -> SFTConfig:
         bf16=training_config.get("bf16", True),
         seed=training_config.get("seed", 42),
         report_to=training_config.get("report_to", "none"),
+        # Only relevant when training a base (non-instruct) model: TRL's docs
+        # note that Qwen base models ship a chat template already, but the
+        # EOS token still needs aligning to it explicitly -- their own
+        # worked example is literally "for Qwen/Qwen2.5-1.5B, set
+        # eos_token='<|im_end|>'". chat_template_path is for the rarer case
+        # where the base tokenizer has no usable template at all and one
+        # needs to be borrowed from another model.
+        eos_token=training_config.get("eos_token"),
+        chat_template_path=training_config.get("chat_template_path"),
         # Guards against overfitting on a small dataset: track eval_loss at
         # each save point and keep the best checkpoint's weights rather than
         # whichever epoch happened to run last. Requires save_strategy to
