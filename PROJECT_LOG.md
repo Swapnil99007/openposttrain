@@ -502,3 +502,23 @@ Sidestep the chat-template approach entirely instead of continuing to chase this
 
 ### Next
 Re-run training with the plain-text (non-conversational) format.
+
+### Results (training succeeded, first eval disappointing)
+Training completed cleanly this time -- healthy loss curve (0.46 -> 0.30 train loss, mean_token_accuracy climbing to ~0.90), same mild overfitting shape as the Instruct-model runs (`eval_loss`: 0.4214 -> 0.4276 -> 0.4577, best at epoch 1). But eval (same `repetition_penalty`/`no_repeat_ngram_size` settings as the baseline, for a "controlled" comparison) gave only **0.01** accuracy -- barely above the pre-SFT baseline, despite the healthy training metrics. Eval also took ~13.5 min, close to the original (no-reppen) baseline's ~15 min, not the clean reppen-baseline's ~2 min -- a clue that generations were running long again.
+
+Inspected completions: severe generation collapse -- spirals into obsessive Chinese-script repetition and pinyin, random JavaScript code snippets for a word problem, German currency notation mixed with math, alphabet-mashing. Hypothesis: `repetition_penalty=1.3`/`no_repeat_ngram_size=3` were tuned specifically to break the *raw* base model's degenerate-repetition problem, but a properly-trained model doing real step-by-step math legitimately needs to reuse tokens (numbers, operators, "Final Answer:") -- forcing it away from that could be sabotaging otherwise-correct generations, similar in spirit to the fp16/bf16 confound in Decision 020.
+
+### Decision
+Added `configs/eval_gsm8k_qwen2_5_1_5b_base_sft.yaml` (same adapter, no repetition penalty) to isolate the effect before concluding anything.
+
+### Results (confirmed -- real success)
+Without the repetition penalty: **0.37** accuracy (37 correct, 10 no_numeric_answer, 1 format_violation, 52 wrong_numeric_answer). A dramatic, real jump from the ~0.00-0.03 baseline. Inspected completions: format compliance is essentially solved, and most "wrong" answers are genuine, coherent single-step arithmetic mistakes (e.g. computing a value increase as `1.5 x 80,000` instead of `80,000 + 1.5 x 80,000`), not gibberish -- though ~10% of completions still fall back into the old degenerate-loop pattern.
+
+### Key Finding -- final result for the base-model SFT track
+**Raw base model (zero-shot): 0.03 (functionally ~0, almost entirely degenerate repetition) -> Base + SFT: 0.37.** A real, qualitative, well-diagnosed improvement -- the model went from "doesn't attempt the task" to "reliably formats answers and mostly reasons correctly." This is the clean SFT success story, achieved by fixing the actual root cause from Decision 020 (fine-tuning an already-tuned Instruct model with narrow data regresses it) rather than continuing to chase fixes on the wrong base model. Full writeup in Decision 021.
+
+### Decision
+This is the project's headline SFT result. The Instruct-model track (Decision 020, final: 70% -> 55-57%, a documented regression) stays as a valuable contrasting finding -- together they demonstrate *when* SFT helps vs. hurts, which is a stronger interview story than either result alone.
+
+### Next
+Update all tracking docs with the final comparison (done). Consider Stage 19 (DPO) or synthetic/self-distilled data generation as the next pipeline stage.

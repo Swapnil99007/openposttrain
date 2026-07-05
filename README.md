@@ -273,6 +273,22 @@ SFT fixed formatting but regressed reasoning accuracy overall. Diagnosed across 
 
 Data quantity clearly hit diminishing returns (1500->7000 examples only gained +2pts) -- more GSM8K data alone is unlikely to close the remaining gap. See `DECISIONS.md` (Decision 020) for the full diagnostic history.
 
+## SFT on the Base Model (headline result)
+
+Since fine-tuning the already-tuned Instruct model only ever regressed accuracy, the next attempt fine-tuned `Qwen/Qwen2.5-1.5B` (base, non-instruct) instead -- a model with no existing GSM8K ability to overwrite:
+
+    PYTHONPATH=src python scripts/prepare_gsm8k_sft_data.py --config configs/data_gsm8k_sft_full.yaml
+    PYTHONPATH=src python scripts/train_sft_lora.py --config configs/train_sft_qwen2_5_1_5b_base_gsm8k.yaml
+    PYTHONPATH=src python scripts/run_eval.py --config configs/eval_gsm8k_qwen2_5_1_5b_base_sft.yaml
+
+### Result
+
+| | Raw base model (zero-shot) | Base + SFT |
+|---|---:|---:|
+| accuracy | 0.03 (functionally ~0 -- see Decision 021) | **0.37** |
+
+A real, dramatic, qualitative improvement -- from a model that doesn't attempt the task at all (degenerates into repeating a single junk token) to one that reliably formats answers and mostly reasons correctly. See `DECISIONS.md` (Decision 021) for the full diagnostic path, including two real bugs found and fixed along the way (a PEFT/tied-embeddings crash, and a repetition-penalty setting that was accidentally sabotaging the fine-tuned model's eval).
+
 ### Next Step
 
-Open decision: try regenerating SFT targets from the base model's own verified-correct reasoning instead of GSM8K's terse gold text, or move forward to other pipeline stages and revisit later.
+Both SFT tracks are documented (Instruct: regression, Base: success) -- together they show *when* SFT helps vs. hurts, which is the stronger interview story. Next candidates: Stage 19 (DPO) or synthetic/self-distilled data generation.

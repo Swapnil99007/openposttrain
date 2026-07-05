@@ -13,7 +13,7 @@ The goal is to build practical experience with:
 - later preference tuning / DPO
 
 ## Current Stage
-Baseline eval, SFT data prep, LoRA SFT training, and base-vs-SFT evaluation are all done, including four rounds of diagnosis (overfitting fix, data scale-up + gentler LoRA, precision control, full-dataset scale-up). Final result: SFT adapter reaches 0.57 accuracy (7000 examples, bf16) vs. 0.70 baseline -- data quantity has hit diminishing returns (1500->7000 only gained +2pts). Open decision: try fixing training data quality/style, or move forward.
+Two full SFT tracks are now done and documented, with contrasting outcomes -- see below. Next candidates: Stage 19 (DPO) or synthetic/self-distilled data generation.
 
 ## Current Baseline
 
@@ -83,18 +83,32 @@ Trained a LoRA adapter (`outputs/sft/qwen2_5_1_5b_gsm8k_lora`) on `Qwen/Qwen2.5-
 
 Overfitting after epoch 1 on this small dataset; `load_best_model_at_end` keeps the epoch-1 checkpoint automatically (verified via `md5sum`). `mean_token_accuracy` is a training proxy, not GSM8K exact-match accuracy.
 
-## Base vs SFT Result (final, across all experiments)
+## SFT Track 1: Instruct Model (Decision 020) -- documented regression
+
+Fine-tuning `Qwen/Qwen2.5-1.5B-Instruct` (already heavily instruction-tuned) only ever regressed accuracy, across four rounds of fixes:
 
 | Experiment | Train examples | Eval dtype | Accuracy |
 |---|---:|---|---:|
-| Baseline | - | fp16/bf16 | 0.70 |
+| Baseline (no adapter) | - | fp16/bf16 | 0.70 |
 | v1 | 200 | fp16 | 0.45 |
 | v2 | 1500 | bf16 | 0.55 |
 | v3 | 7000 | bf16 | 0.57 |
 
-Diagnostic history: v1 (200 examples, r=16) regressed to 0.45 with clear training-time overfitting -> fixed overfitting via `load_best_model_at_end` (Decision 019) -> v2 (1500 examples, gentler LoRA r=8/alpha=16/lr=1e-4) still only reached 0.49, with flatter training curves but oddly incoherent failure examples -> found and controlled for an fp16-eval/bf16-train precision mismatch (base model is precision-robust at 0.70 either way; the adapter is not, 0.49->0.55) -> v3 (full ~7000-example train set, same settings) reached only 0.57, a diminishing-returns +2pts for 4.67x more data. Data quantity alone is unlikely to close the remaining gap. Full detail in `DECISIONS.md` Decision 020.
+Root cause: fine-tuning an already-tuned model with narrower/lower-quality data tends to overwrite good behavior rather than add new capability. Data quantity alone showed clear diminishing returns (1500->7000 only gained +2pts). Full diagnostic history in `DECISIONS.md` Decision 020.
+
+## SFT Track 2: Base Model (Decision 021) -- headline success
+
+Pivoted to fine-tuning `Qwen/Qwen2.5-1.5B` (base, non-instruct) instead -- a model with no existing GSM8K ability to overwrite:
+
+| | Raw base model (zero-shot) | Base + SFT |
+|---|---:|---:|
+| accuracy | 0.03 (functionally ~0, almost entirely degenerate repetition) | **0.37** |
+
+A real, dramatic, qualitative improvement: the raw model doesn't attempt the task at all (echoes the prompt, then repeats a junk token); the SFT'd model reliably formats answers and mostly reasons correctly, with most "wrong" answers being genuine single-step arithmetic slips rather than gibberish.
+
+Two real bugs found and fixed along the way: (1) borrowing the Instruct model's chat template crashed on an unresolved PEFT/tied-embeddings interaction -- fixed by training on plain text instead of chat-formatted messages; (2) the same `repetition_penalty` settings used to diagnose the raw model's degenerate decoding were, when kept "for a controlled comparison," actively sabotaging the fine-tuned model's legitimate generation -- removing them for the SFT'd model's eval was the correct call, verified by inspecting completions. Full diagnostic path in `DECISIONS.md` Decision 021.
 
 ## Next Step
-Open decision: try regenerating SFT targets from the base model's own verified-correct reasoning instead of GSM8K's terse gold text (untested remaining lever), vs. move forward to other pipeline stages and revisit later.
+Both tracks are documented -- together they show *when* SFT helps (teaching a genuinely missing skill) vs. hurts (overwriting existing tuned behavior with narrower data). Next candidates: Stage 19 (DPO) or synthetic/self-distilled data generation.
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.

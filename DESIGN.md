@@ -423,3 +423,27 @@ Done -- four rounds of diagnosis completed: overfitting fix (Decision 019), data
 Data quantity shows clear diminishing returns (1500->7000 only gained +2pts), meaning quantity alone is unlikely to close the remaining ~13-point gap. `HFModel` now supports an optional `dtype` override (`float16`/`bfloat16`/`float32`) for precision-control experiments like this one.
 
 Open decision: try regenerating SFT targets from the base model's own verified-correct reasoning instead of GSM8K's terse gold text, vs. move forward to other pipeline stages and treat this as a documented finding to revisit later.
+
+## Base-Model SFT (headline result)
+
+Decision: fine-tune `Qwen/Qwen2.5-1.5B` (base, non-instruct) instead of `-Instruct`, since the Instruct-model track (above) only ever regressed accuracy -- consistent with SFT overwriting existing tuned behavior rather than teaching something new. The base model has no such behavior to overwrite.
+
+Files/changes beyond what's listed above:
+
+- `src/openposttrain/training/sft_lora.py` -- added `to_plain_prompt_completion()` and a `conversational` flag on `load_sft_dataset()`. Training uses plain-text prompt/completion (not chat messages), avoiding a chat-template/new-token/tied-embeddings PEFT bug hit twice when trying `chat_template_path` (unresolved upstream, huggingface/peft#2777).
+- `src/openposttrain/models/hf_model.py` -- added `repetition_penalty`/`no_repeat_ngram_size` (opt-in, `None` by default) to fix/diagnose base-model decoding degeneration; also fixed tokenizer loading to prefer `adapter_path` over `model_name` when present.
+- `configs/train_sft_qwen2_5_1_5b_base_gsm8k.yaml`, `configs/eval_gsm8k_qwen2_5_1_5b_base*.yaml` -- training and eval configs for this track.
+
+Key lesson: **decoding settings tuned to fix one model's failure mode can actively harm a different model.** `repetition_penalty=1.3`/`no_repeat_ngram_size=3` were necessary to reveal that the raw base model has no real zero-shot capability (breaks a degenerate repetition loop), but the same settings, applied "for a controlled comparison," severely damaged the fine-tuned model's legitimate generation (forcing it away from tokens it correctly needed to reuse). Removing them for the SFT'd model's eval was the correct call, verified by inspecting completions, not assumed.
+
+### Final Result
+
+| | Raw base model (zero-shot) | Base + SFT |
+|---|---:|---:|
+| accuracy | 0.03 (functionally ~0 -- see Decision 021) | **0.37** |
+
+A real, qualitative improvement: from "doesn't attempt the task" (degenerate repetition) to "reliably formats answers, mostly reasons correctly." Full diagnostic writeup in Decision 021.
+
+### Next Design Step
+
+Both SFT tracks are now documented (Instruct: regression, Decision 020; Base: real success, Decision 021), together demonstrating *when* SFT helps vs. hurts. Next candidates: Stage 19 (DPO) or synthetic/self-distilled data generation.

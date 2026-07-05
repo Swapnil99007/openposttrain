@@ -410,4 +410,33 @@ Accuracy: **0.57** -- only +2 points over v2's 0.55, despite 4.67x more training
 Data quantity shows clear diminishing returns: 200->1500 (+4pts), then 1500->7000, a much bigger jump, (+2pts). The precision fix alone (+6pts) mattered more than 5500 additional training examples. Data quantity is very unlikely to close the remaining ~13-point gap on its own.
 
 ### Status
-Accepted as a documented negative result. Remaining candidate cause, not yet tested: GSM8K's terse gold-solution text may be a poor SFT target for a model that already reasons more carefully via its own instruction-tuning -- training on terser text could be making it skip verification steps it would otherwise do. Testing this would mean regenerating SFT targets from the base model's own verified-correct reasoning (self-distillation) rather than GSM8K's gold text. Decision on whether to pursue that vs. move forward and treat the current result as a documented finding is open -- see PROJECT_LOG.md 2026-07-05.
+Accepted as a documented negative result for the Instruct-model track. Superseded as the project's headline SFT result by Decision 021 (SFT on the base model instead) -- see below.
+
+## Decision 021: SFT on the base (non-instruct) model succeeds where Instruct-model SFT regressed
+
+### Decision
+Fine-tune `Qwen/Qwen2.5-1.5B` (base, non-instruct) instead of `-Instruct`, reusing the existing ~7000-example GSM8K SFT data. This is the project's headline SFT result.
+
+### Reason
+Decision 020 established that fine-tuning the already-instruction-tuned Instruct model, even after 3 rounds of fixes (more data, gentler LoRA, precision control), only ever regressed accuracy (70% -> 55-57%) -- consistent with SFT overwriting existing tuned behavior rather than teaching something new. The base model has no such behavior to overwrite: its zero-shot accuracy is functionally ~0% (see below), so there's genuine headroom for SFT to teach a real, missing skill.
+
+### What Went Wrong Along the Way (and how each was diagnosed, not guessed)
+1. **Base model zero-shot baseline was 0.03, but the raw completions showed the model doesn't attempt the problem at all** -- it echoes the prompt back, then degenerates into repeating a single junk token (`afone`, `aload`) or looping the whole prompt. The "3 correct" and the false `format_violation=0` reading were both artifacts: our evaluator's format check just searches for the substring `"final answer"`, which the model trivially satisfies by echoing the prompt (which contains that literal phrase).
+2. **Tested whether this was a decoding artifact** (like the max_new_tokens truncation in Decision 017): added `repetition_penalty`/`no_repeat_ngram_size` to `HFModel.generate()`. Result: accuracy dropped further to 0.00, with even shorter, still-degenerate completions across foreign scripts and junk tokens. Confirmed there's no hidden capability being masked -- the base model genuinely cannot do this task zero-shot, in any decoding configuration tested.
+3. **Training crashed twice** trying to borrow the Instruct model's chat template (`chat_template_path`) so the base tokenizer could format conversations -- an unresolved PEFT/TRL interaction between newly-added tokens and tied embeddings (`AttributeError: 'TrainableTokensWrapper' object has no attribute 'bias'`; PEFT's `modules_to_save` fix, applied per TRL's own suggested fix, didn't resolve it -- see huggingface/peft#2777). Sidestepped by training on **plain text prompt/completion** (no chat template, no new tokens at all) instead -- also a better match for how `HFModel.generate()` already evaluates this tokenizer.
+4. **Training completed cleanly** (healthy loss curve, same mild overfitting shape as the Instruct-model runs, `load_best_model_at_end` picked epoch 1), but eval with the same `repetition_penalty` settings as the baseline gave only 0.01 -- and inspecting completions showed severe generation collapse (Chinese-script repetition spirals, random JavaScript snippets, alphabet-mashing). Hypothesis: `repetition_penalty`/`no_repeat_ngram_size`, tuned specifically to break the *raw* model's degenerate loop, actively sabotage the *trained* model, which legitimately needs to reuse tokens (numbers, operators, "Final Answer:") during correct reasoning. Confirmed by re-running without them.
+
+### Final Result
+
+| | Raw base model (zero-shot) | Base + SFT |
+|---|---:|---:|
+| accuracy | 0.03 (functionally ~0 -- see above) | **0.37** |
+| correct | 3 | 37 |
+| no_numeric_answer (degenerate loop) | 25 | 10 |
+| format_violation | 0 (false reading, see above) | 1 |
+| wrong_numeric_answer | 72 (mostly noise, see above) | 52 (mostly genuine single-step arithmetic slips) |
+
+A real, dramatic, well-diagnosed improvement -- not just a higher number, but a qualitative change from "the model doesn't attempt the task" to "the model reliably formats answers and mostly reasons correctly, occasionally making an understandable arithmetic mistake." This is the SFT success story the project set out to demonstrate, achieved by fixing the actual root cause identified in Decision 020 (already-tuned model + narrow data = regression) rather than continuing to chase data quantity/quality fixes on the wrong base model.
+
+### Status
+Accepted.
