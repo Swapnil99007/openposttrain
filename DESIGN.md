@@ -444,6 +444,8 @@ Key lesson: **decoding settings tuned to fix one model's failure mode can active
 
 A real, qualitative improvement: from "doesn't attempt the task" (degenerate repetition) to "reliably formats answers, mostly reasons correctly." Full diagnostic writeup in Decision 021.
 
+Note: an independent retrain of this exact recipe later evaluated to 0.32, not 0.37, despite an identical seed -- GPU training isn't bit-reproducible run-to-run (Decision 024).
+
 ### Next Design Step
 
 Done -- see "DPO on the SFT'd Base Model" below.
@@ -461,13 +463,15 @@ Key design choice: **on-policy rejected samples**. Rather than pairing gold answ
 
 ### Result
 
+The DPO adapter's actual SFT ancestor evaluates to 0.32 (not the separately-run 0.37 -- see Decision 024):
+
 | Run | Accuracy |
 |---|---:|
 | Base zero-shot | 0.03 |
-| Base + SFT | 0.37 |
+| Base + SFT (actual DPO ancestor) | 0.32 |
 | **Base + SFT + DPO** | **0.51** |
 
-A real, controlled +14-point improvement on top of the SFT result, concentrated in fixing genuine close-but-wrong reasoning (`wrong_numeric_answer`: 52 -> 36); the residual degenerate-generation failure mode (`no_numeric_answer`) was untouched by DPO. Full diagnostic detail in Decision 022.
+A real, controlled **+19-point** improvement, on both failure modes: `wrong_numeric_answer` (close-but-wrong reasoning) dropped 49 -> 36, and `no_numeric_answer` (degenerate-loop generations) also dropped 17 -> 10. Full diagnostic detail in Decision 022 (as corrected).
 
 ### Next Design Step
 

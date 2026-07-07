@@ -573,3 +573,26 @@ This reuses existing `results.csv` outputs directly -- no new model generation n
 
 ### Next
 Run it comparing the SFT-only run (0.37) vs. SFT+DPO run (0.51) -- need to transfer those two `results.csv` files back from RunPod first, since only the very first baseline result was ever copied to the Mac.
+
+### Results (unexpected finding: SFT training isn't bit-reproducible)
+The RunPod pod that produced the 0.51 DPO result no longer had a standalone SFT-only eval run to transfer -- on that fresh pod we retrained SFT and went straight into DPO without a fresh SFT eval in between. Re-ran the SFT-only eval on the *actual* adapter DPO continued from: **0.32**, not the previously-reported 0.37, despite identical eval settings and the same training seed (42).
+
+### Key Finding
+GPU training is not bit-reproducible across runs even with a fixed seed (certain CUDA ops are non-deterministic by default). Two independently-trained "identical" SFT adapters landed at slightly different weights (`eval_loss`: 0.4214/0.4276/0.4577 vs. 0.4215/0.4272/0.4574) -- close, not identical -- enough to flip ~5 borderline greedy-decoding outputs on the 100-question eval. Full writeup in Decision 024.
+
+### Decision
+The DPO adapter was continued from the 0.32 adapter, not the 0.37 one -- so **0.32 -> 0.51 (+19 points) is the lineage-correct comparison**, and the one to cite going forward, though it's a stronger number than the original +14. The 0.37 result remains valid as an independent data point, just not this adapter's ancestor. This is exactly the newly-regenerated `results.csv` needed for the judge comparison anyway, so no extra work was wasted.
+
+### Next
+Run the LLM judge comparing this 0.32 SFT run vs. the 0.51 DPO run (the correct, same-lineage comparison).
+
+### Results (failure-type breakdown, corrected comparison)
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base + SFT (actual DPO ancestor) | 32 | 17 | 2 | 49 | 0.32 |
+| Base + SFT + DPO | 51 | 10 | 3 | 36 | 0.51 |
+
+With the corrected lineage, DPO improved on *both* failure modes, not just one: `wrong_numeric_answer` 49->36 and `no_numeric_answer` 17->10. The originally-reported "DPO left no_numeric_answer untouched" claim was an artifact of comparing against the wrong SFT run (which coincidentally also read 10) -- retracted. Updated `DECISIONS.md` (022, 024), `README.md`, `DESIGN.md`, `docs/current_context.md` accordingly.
+
+### Next
+Run the LLM judge on this same corrected pair (0.32 SFT vs. 0.51 DPO).

@@ -294,6 +294,8 @@ Full diagnostic path (all four runs):
 
 A real, dramatic, qualitative improvement -- from a model that doesn't attempt the task at all (degenerates into repeating a single junk token) to one that reliably formats answers and mostly reasons correctly. See `DECISIONS.md` (Decision 021) for the full diagnostic path, including two real bugs found and fixed along the way (a PEFT/tied-embeddings crash, and a repetition-penalty setting that was accidentally sabotaging the fine-tuned model's eval).
 
+Note: a later independent retrain of this same SFT recipe evaluated to 0.32, not 0.37, despite identical settings and seed -- GPU training isn't bit-reproducible run-to-run. See Decision 024.
+
 ### Next Step
 
 Both SFT tracks are documented (Instruct: regression, Base: success) -- together they show *when* SFT helps vs. hurts, which is the stronger interview story. Next: DPO (below).
@@ -308,17 +310,19 @@ Continues the SFT adapter with preference tuning, using on-policy pairs generate
 
 ### Result
 
+The DPO adapter was continued from a specific SFT adapter -- its own eval accuracy (0.32, not the separately-run 0.37; see Decision 024) is the correct "before" for this comparison:
+
 | Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
 |---|---:|---:|---:|---:|---:|
 | Base zero-shot | 3 | 25 | 0 | 72 | 0.03 |
-| Base + SFT | 37 | 10 | 1 | 52 | 0.37 |
+| Base + SFT (actual DPO ancestor) | 32 | 17 | 2 | 49 | 0.32 |
 | **Base + SFT + DPO** | **51** | 10 | 3 | 36 | **0.51** |
 
-A real, controlled +14-point improvement, concentrated exactly where the preference data targeted it: `wrong_numeric_answer` dropped 52 -> 36 (fixed genuine close-but-wrong reasoning). `no_numeric_answer` (occasional generation collapse) was untouched -- an honest, specific result rather than a blanket improvement. See `DECISIONS.md` (Decision 022) for the full detail, including a training-dynamics note: unlike every SFT run, `eval_loss` decreased monotonically across all 3 epochs with no overfitting.
+A real, controlled **+19-point** improvement (0.32 -> 0.51), on *both* fronts: `wrong_numeric_answer` dropped 49 -> 36 (fixed genuine close-but-wrong reasoning) and `no_numeric_answer` dropped 17 -> 10 (fewer degenerate-loop generations too). See `DECISIONS.md` (Decision 022) for the full detail, including a training-dynamics note: unlike every SFT run, `eval_loss` decreased monotonically across all 3 epochs with no overfitting.
 
 ### Next Step
 
-The core post-training arc (baseline -> SFT -> DPO, 0.03 -> 0.37 -> 0.51) is complete and documented end to end. Next: LLM-as-judge evaluation (below).
+The core post-training arc (baseline -> SFT -> DPO, 0.03 -> 0.32 -> 0.51) is complete and documented end to end. Next: LLM-as-judge evaluation (below).
 
 ## LLM-as-Judge Evaluation
 

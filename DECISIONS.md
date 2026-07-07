@@ -465,18 +465,50 @@ Continued the existing SFT adapter directly (`AutoPeftModelForCausalLM.from_pret
 
 ### Result
 
+**Corrected (see Decision 024): the table below originally compared DPO against the wrong SFT run.** The DPO adapter was continued from a *different* SFT training run than the one independently reported as 0.37 -- the lineage-correct comparison uses that adapter's own eval (0.32):
+
 | Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
 |---|---:|---:|---:|---:|---:|
 | Base zero-shot | 3 | 25 | 0 | 72 | 0.03 |
-| Base + SFT | 37 | 10 | 1 | 52 | 0.37 |
+| Base + SFT (actual DPO ancestor) | 32 | 17 | 2 | 49 | 0.32 |
 | **Base + SFT + DPO** | **51** | 10 | 3 | 36 | **0.51** |
 
 Same eval settings as the SFT result (no repetition_penalty, bf16, same 100 test questions) -- a directly controlled comparison (Decision 012). Inspected completions: clean, correct, well-structured step-by-step reasoning, not gamed formatting.
 
-The improvement is concentrated exactly where the preference data targeted it: `wrong_numeric_answer` dropped from 52 -> 36 (fixing genuine close-but-wrong reasoning). `no_numeric_answer` (the residual degenerate-loop tendency) stayed flat at 10 -- DPO corrected reasoning errors but did not eliminate the occasional generation collapse. `format_violation` ticked up slightly (1 -> 3), within noise.
+A real, controlled **+19-point** improvement (0.32 -> 0.51). With the correct lineage, DPO improved on *both* fronts, not just one: `wrong_numeric_answer` dropped 49 -> 36 (fixing genuine close-but-wrong reasoning) **and** `no_numeric_answer` dropped 17 -> 10 (fewer degenerate-loop generations too). The original writeup claimed DPO left the degenerate-loop rate untouched, based on a coincidental match (both runs showed `no_numeric_answer=10`) against the wrong SFT comparison point -- that claim is retracted; DPO's effect was broader than first reported. `format_violation` ticked up slightly (2 -> 3), within noise.
 
 ### Status
-Accepted. This is now the project's best result across the full pipeline: raw base model (0.03) -> SFT (0.37) -> SFT + DPO (0.51).
+Accepted. This is now the project's best result across the full pipeline: raw base model (0.03) -> SFT (0.32) -> SFT + DPO (0.51). See Decision 024 for the training-non-determinism finding that necessitated this correction, and for the separately-valid 0.37 SFT data point from an independent training run.
+
+## Decision 024: SFT training is not bit-reproducible across runs, even with a fixed seed (0.37 vs 0.32)
+
+### Finding
+When a fresh RunPod pod required retraining the SFT adapter from scratch (same code, same data, same `seed=42`), the retrained adapter evaluated to **0.32** accuracy, not the original **0.37** -- a real 5-point swing between two nominally identical experiments. Both evals used identical settings (no `repetition_penalty`, bf16, greedy `temperature=0.0`, same 100 test questions), so the difference isn't measurement noise -- it's a genuinely different adapter.
+
+The two training runs' `eval_loss` curves are close but not identical:
+
+| Run | Epoch 1 | Epoch 2 | Epoch 3 |
+|---|---:|---:|---:|
+| Original | 0.4214 | 0.4276 | 0.4577 |
+| Retrain | 0.4215 | 0.4272 | 0.4574 |
+
+### Root Cause
+GPU training is not bit-reproducible run-to-run even with a fixed seed -- certain CUDA operations (attention, some parallel reductions) are non-deterministic by default (`torch.use_deterministic_algorithms` was never set). The tiny resulting weight differences are enough to flip several borderline greedy-decoding outputs on the 100-question eval set.
+
+### Practical Consequence
+The DPO adapter (Decision 022, final result 0.51) was continued from the **retrained** adapter (the one that evaluates to 0.32), not the original 0.37 adapter -- the original pod (and its results) no longer existed by the time DPO training ran. This means the previously-reported "0.37 -> 0.51" comparison mixed two different SFT adapters. The lineage-correct comparison for the actual DPO adapter is:
+
+| | SFT (this adapter's own accuracy) | SFT + DPO (continued from this adapter) |
+|---|---:|---:|
+| accuracy | 0.32 | 0.51 |
+
+A +19-point improvement from DPO on this specific lineage -- an even stronger result than the originally-reported +14 points, and the correct one to cite going forward. The original 0.37 remains a valid, independently-verified data point in its own right; it just isn't the ancestor of the 0.51 adapter.
+
+### Takeaway
+A single point-estimate accuracy from one training run carries real run-to-run variance (here, ~5 points on a 100-example eval) that isn't visible unless you happen to retrain and re-measure. Neither number is "wrong" -- but citing an exact single decimal (e.g. "0.37") as if it were a fixed property of "the SFT approach" overstates precision. If this project needed a more statistically rigorous accuracy claim, the right fix would be averaging over multiple training seeds and/or a larger eval set, not just running once. Given project scope/time, that's noted as a known limitation rather than fixed.
+
+### Status
+Accepted as a documented limitation. Both SFT numbers (0.32, 0.37) and the DPO number (0.51) are reported transparently; 0.32 -> 0.51 is used as the primary lineage-correct comparison going forward.
 
 ## Decision 023: LLM-as-judge pairwise evaluation, using Claude Opus 4.8
 

@@ -91,19 +91,23 @@ A real, dramatic, qualitative improvement: the raw model doesn't attempt the tas
 
 Two real bugs found and fixed along the way: (1) borrowing the Instruct model's chat template crashed on an unresolved PEFT/tied-embeddings interaction -- fixed by training on plain text instead of chat-formatted messages; (2) the same `repetition_penalty` settings used to diagnose the raw model's degenerate decoding were, when kept "for a controlled comparison," actively sabotaging the fine-tuned model's legitimate generation -- removing them for the SFT'd model's eval was the correct call, verified by inspecting completions. Full diagnostic path in `DECISIONS.md` Decision 021.
 
-## Stage 19: DPO on the SFT'd Base Model (Decision 022) -- further improvement
+Note: an independent retrain of this exact recipe later evaluated to 0.32, not 0.37, despite an identical seed -- GPU training isn't bit-reproducible run-to-run. See Decision 024.
+
+## Stage 19: DPO on the SFT'd Base Model (Decision 022, corrected) -- further improvement
 
 Continued the SFT LoRA adapter with DPO, using on-policy preference pairs: for training questions the SFT'd model gets wrong, `chosen` = gold reasoning, `rejected` = the model's own actual wrong completion (targets real, current failure modes rather than generic bad answers).
+
+**Correction**: the DPO adapter was continued from a different SFT training run than the one reported as 0.37 above (Decision 024) -- the lineage-correct comparison uses that adapter's own eval (0.32):
 
 | Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
 |---|---:|---:|---:|---:|---:|
 | Base zero-shot | 3 | 25 | 0 | 72 | 0.03 |
-| Base + SFT | 37 | 10 | 1 | 52 | 0.37 |
+| Base + SFT (actual DPO ancestor) | 32 | 17 | 2 | 49 | 0.32 |
 | **Base + SFT + DPO** | **51** | 10 | 3 | 36 | **0.51** |
 
-A real, controlled +14-point improvement, concentrated specifically in fixing close-but-wrong reasoning (`wrong_numeric_answer`: 52 -> 36); the degenerate-generation failure mode (`no_numeric_answer`) was untouched. Training note: `eval_loss` decreased monotonically across all 3 epochs (no overfitting, unlike every SFT run). Both the SFT and DPO adapters were transferred off the ephemeral RunPod pod to the Mac (`outputs/sft/`, `outputs/dpo/`, both gitignored) so future pods can re-upload rather than retrain.
+A real, controlled **+19-point** improvement, on *both* failure modes: `wrong_numeric_answer` dropped 49 -> 36 (fixed close-but-wrong reasoning) and `no_numeric_answer` dropped 17 -> 10 (fewer degenerate-loop generations too) -- broader than the originally-reported "reasoning only" effect, which was an artifact of comparing against the wrong SFT run. Training note: `eval_loss` decreased monotonically across all 3 epochs (no overfitting, unlike every SFT run). Both the SFT and DPO adapters were transferred off the ephemeral RunPod pod to the Mac (`outputs/sft/`, `outputs/dpo/`, both gitignored) so future pods can re-upload rather than retrain.
 
 ## Next Step
-The full post-training arc (baseline 0.03 -> SFT 0.37 -> DPO 0.51) is complete and documented end to end -- a strong, honest interview story showing both when SFT hurts (Instruct track) and when SFT + DPO together genuinely help (base-model track). Next candidates: serving/inference comparison (vLLM/TensorRT-LLM, ties to existing background), or synthetic/self-distilled data generation to push further.
+The full post-training arc (baseline 0.03 -> SFT 0.32 -> DPO 0.51) is complete and documented end to end, including an honest correction after re-verifying an assumption -- a strong interview story showing both when SFT hurts (Instruct track), when SFT + DPO together genuinely help (base-model track), and that single point-estimate accuracy numbers carry real run-to-run variance worth disclosing. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM, ties to existing background), or synthetic/self-distilled data generation to push further.
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.
