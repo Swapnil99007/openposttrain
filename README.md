@@ -337,6 +337,18 @@ Pairwise comparison using Claude as a judge, instead of exact-match string parsi
 
 Judge model is Claude Opus 4.8 by default (`--model` to override) -- see `DECISIONS.md` (Decision 023) for the cost/quality reasoning.
 
+### Result
+
+30 SFT vs. SFT+DPO pairs judged:
+
+| Winner | Count | Rate |
+|---|---:|---:|
+| SFT+DPO | 13 | 43.3% |
+| SFT | 5 | 16.7% |
+| tie | 12 | 40.0% |
+
+Confirms the exact-match accuracy gain (0.32 -> 0.51) qualitatively: DPO wins on reasoning quality far more often than it loses, judged independently of whether the final number happens to match. See `DECISIONS.md` (Decision 025).
+
 ### Next Step
 
 Consider serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.

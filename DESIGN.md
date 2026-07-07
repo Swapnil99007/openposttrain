@@ -487,6 +487,10 @@ Files:
 
 Purpose: a genuinely different evaluation angle from the project's exact-match evaluator -- reads for reasoning quality rather than string-matching a number, and produces pairwise (not just per-run) comparisons. No RunPod/GPU needed; runs entirely on the Mac against existing eval outputs. See Decision 023 for the model-choice reasoning (Claude Opus 4.8).
 
+### Result
+
+Judged the SFT (0.32) vs. SFT+DPO (0.51) runs, 30 pairs: SFT+DPO won 13/30 (43.3%), SFT won 5/30 (16.7%), tie 12/30 (40.0%). Directionally consistent with the exact-match accuracy gap, and obtained via an independent reasoning-quality judgment rather than string matching. See Decision 025.
+
 ### Next Design Step
 
 The core post-training arc (baseline -> SFT -> DPO) plus LLM-as-judge evaluation are both done. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.

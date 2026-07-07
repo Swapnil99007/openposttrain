@@ -528,3 +528,17 @@ Claude Opus 4.8. Estimated cost per comparison (~800 input / ~150 output tokens)
 
 ### Status
 Accepted.
+
+## Decision 025: LLM-as-judge result -- SFT+DPO preferred on reasoning quality
+
+### Decision
+Ran `scripts/run_llm_judge.py` on the lineage-correct pair: SFT (0.32 accuracy, `20260707_055109` run) vs. SFT+DPO (0.51 accuracy, `20260707_044505` run), 30 question pairs, Claude Opus 4.8 as judge.
+
+### Result
+SFT+DPO won 13/30 (43.3%), SFT won 5/30 (16.7%), tie 12/30 (40.0%).
+
+### Interpretation
+The judge's preference for SFT+DPO (13 vs. 5, ~2.6x) is directionally consistent with the exact-match accuracy gap (0.32 -> 0.51), obtained via a completely independent method -- reading reasoning quality rather than string-matching a final number. This corroborates that the DPO improvement is real and not an artifact of the exact-match evaluator's specific parsing rules. The high tie rate (40%) is expected: many GSM8K problems are short enough that both models produce equally clear correct (or equally clear wrong) reasoning, leaving little for a judge to differentiate.
+
+### Status
+Accepted. Full per-question verdicts saved to `reports/judge_sft_vs_dpo.csv`.

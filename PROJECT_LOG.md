@@ -596,3 +596,14 @@ With the corrected lineage, DPO improved on *both* failure modes, not just one: 
 
 ### Next
 Run the LLM judge on this same corrected pair (0.32 SFT vs. 0.51 DPO).
+
+## 2026-07-07: LLM-as-judge run, SFT (0.32) vs. SFT+DPO (0.51)
+
+### Results
+30 question pairs, Claude Opus 4.8 as judge: **SFT+DPO won 13/30 (43.3%), SFT won 5/30 (16.7%), tie 12/30 (40.0%)**. Per-question verdicts saved to `reports/judge_sft_vs_dpo.csv`.
+
+### Interpretation
+An independent evaluation method (judged reasoning quality, not string-matched final answer) agrees in direction with the exact-match accuracy gap (0.32 -> 0.51) -- DPO wins roughly 2.6x more often than it loses. This is good evidence the accuracy improvement is a real capability gain and not an artifact of the evaluator's parsing quirks. Full detail in `DECISIONS.md` Decision 025; updated `README.md` and `DESIGN.md` LLM-as-Judge sections and `docs/current_context.md` accordingly.
+
+### Status
+The full arc (baseline 0.03 -> SFT 0.32 -> DPO 0.51, confirmed by LLM judge) is complete and documented. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.
