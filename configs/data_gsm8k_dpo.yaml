@@ -1,0 +1,22 @@
+model:
+  name: Qwen/Qwen2.5-1.5B
+  adapter_path: outputs/sft/qwen2_5_1_5b_base_gsm8k_lora
+  dtype: bfloat16
+  max_new_tokens: 512
+  device: auto
+  # No repetition_penalty/no_repeat_ngram_size -- Decision 021 found those
+  # settings actively harm this SFT'd model's generation quality.
+
+# Pulls prompts + gold ("chosen") answers straight from the existing SFT
+# training data. train_limit/validation_limit are candidate counts *before*
+# filtering to wrong-only pairs -- actual pair counts will be lower (only
+# examples where the model's own completion is wrong become training pairs).
+# Deliberately reuses part of the same pool used for SFT training (on-policy
+# resampling) -- this is fine for generating correction signal, unlike
+# reusing the "test" split, which stays untouched (Decision 018).
+data:
+  source_jsonl: data/sft/gsm8k_train_full.jsonl
+  train_limit: 300
+  validation_limit: 50
+  train_output: data/dpo/gsm8k_train_pairs.jsonl
+  validation_output: data/dpo/gsm8k_val_pairs.jsonl

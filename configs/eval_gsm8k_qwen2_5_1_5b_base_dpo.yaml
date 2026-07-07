@@ -1,0 +1,23 @@
+run_name: gsm8k_qwen2_5_1_5b_base_dpo_512_tokens
+
+# Identical to eval_gsm8k_qwen2_5_1_5b_base_sft.yaml (the 0.37 result) except
+# adapter_path -- isolates the DPO step as the only variable (Decision 012).
+# No repetition_penalty, per Decision 021.
+model:
+  name: Qwen/Qwen2.5-1.5B
+  adapter_path: outputs/dpo/qwen2_5_1_5b_base_gsm8k_dpo
+  dtype: bfloat16
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

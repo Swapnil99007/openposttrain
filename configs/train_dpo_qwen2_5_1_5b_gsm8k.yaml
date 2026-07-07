@@ -1,0 +1,24 @@
+model:
+  sft_adapter_path: outputs/sft/qwen2_5_1_5b_base_gsm8k_lora
+
+data:
+  train_path: data/dpo/gsm8k_train_pairs.jsonl
+  validation_path: data/dpo/gsm8k_val_pairs.jsonl
+
+training:
+  output_dir: outputs/dpo/qwen2_5_1_5b_base_gsm8k_dpo
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  # TRL's guidance: use a higher LR for adapter/LoRA training than full
+  # fine-tuning (~1e-5), since only the small adapter is being updated.
+  learning_rate: 0.00001
+  beta: 0.1
+  max_length: 1024
+  logging_steps: 5
+  eval_strategy: epoch
+  save_strategy: epoch
+  bf16: true
+  seed: 42
+  report_to: none

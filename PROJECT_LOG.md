@@ -522,3 +522,20 @@ This is the project's headline SFT result. The Instruct-model track (Decision 02
 
 ### Next
 Update all tracking docs with the final comparison (done). Consider Stage 19 (DPO) or synthetic/self-distilled data generation as the next pipeline stage.
+
+## 2026-07-06 (Stage 19: DPO, built on the base-model SFT result)
+
+### Goal
+Continue refining the SFT'd base model (0.37 accuracy) with DPO, targeting its actual current failure modes rather than teaching a new skill from scratch.
+
+### What I did
+- Added `src/openposttrain/data/gsm8k_dpo.py`: generates on-policy DPO pairs by running the SFT'd model over GSM8K training prompts (reusing the same prompts/gold answers already prepared for SFT) and keeping only the cases where the model's own greedy completion is wrong -- `chosen` = gold reasoning, `rejected` = the model's actual (wrong) completion. Targets DPO training directly at real, current failure modes rather than arbitrary bad answers.
+- Added `configs/data_gsm8k_dpo.yaml` (300 train / 50 validation candidates, filtered down to wrong-only pairs), `scripts/prepare_gsm8k_dpo_data.py`.
+- Added `src/openposttrain/training/dpo.py` and `scripts/train_dpo.py`: continues the *same* SFT LoRA adapter with TRL's `DPOTrainer` (`AutoPeftModelForCausalLM.from_pretrained(..., is_trainable=True)`, no fresh `peft_config`, per TRL's documented pattern), rather than starting a new adapter. `beta=0.1`, `learning_rate=1e-5` (TRL's guidance for adapter training), same `load_best_model_at_end` overfitting guardrail as SFT.
+- Added `configs/train_dpo_qwen2_5_1_5b_gsm8k.yaml`, `configs/eval_gsm8k_qwen2_5_1_5b_base_dpo.yaml` (identical to the successful SFT eval config except adapter_path, no repetition_penalty per Decision 021).
+
+### Design Note
+DPO pair generation reuses part of the same GSM8K train pool already used for SFT (on-policy resampling of the model's own current behavior) -- this is fine for generating correction signal, unlike touching the `test` split, which stays untouched (Decision 018 discipline maintained).
+
+### Next
+Run the 3-step sequence on RunPod: generate pairs, train, eval. Expect pair generation to take a while (300+50 candidates at ~8-14s/example based on prior eval timings).
