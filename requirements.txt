@@ -60,3 +60,4 @@ yarl==1.24.2
 tabulate
 peft
 trl
+anthropic

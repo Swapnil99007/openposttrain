@@ -11,4 +11,5 @@ notebooks/.ipynb_checkpoints/
 
 .env
 .env.*
+!.env.example
 *.log

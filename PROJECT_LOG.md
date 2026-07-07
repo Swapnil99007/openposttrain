@@ -556,3 +556,20 @@ Transferred both the SFT and DPO LoRA adapters back to the Mac via `runpodctl se
 
 ### Next
 Consider Stage 20 (serving/inference comparison, ties to existing vLLM/TensorRT-LLM background) or synthetic data generation as the next pipeline stage, or treat the post-training arc (baseline -> SFT -> DPO) as complete for now.
+
+## 2026-07-07 (LLM-as-judge evaluation)
+
+### Goal
+Add LLM-as-judge pairwise comparison -- a different evaluation methodology from exact-match string parsing, and one of the specific skills named on the Liquid AI application that originally motivated this whole project.
+
+### What I did
+- Added `src/openposttrain/judge/schemas.py` (`JudgeVerdict` Pydantic model: `winner` in {A, B, tie}, `reasoning_quality_score`, `explanation`) and `src/openposttrain/judge/llm_judge.py` (`judge_pair()` -- calls Claude via `client.messages.parse(..., output_format=JudgeVerdict)` for automatic schema validation, with retry on failure rather than silently dropping a malformed verdict).
+- Added `scripts/run_llm_judge.py`: CLI that takes two eval runs' `results.csv` files, pairs up matching questions by row index (verifying question text matches as a safety check), judges each pair, aggregates win rates, and saves per-question verdicts to CSV.
+- Added `anthropic` to `requirements.txt` and `.env.example` documenting `ANTHROPIC_API_KEY`.
+- Judge model: Claude Opus 4.8, chosen after estimating cost (~800 input / ~150 output tokens per comparison -- even 100 comparisons is well under $1 regardless of model, so judgment quality mattered more than cost here).
+
+### Design Note
+This reuses existing `results.csv` outputs directly -- no new model generation needed, runs entirely on the Mac (no RunPod/GPU required), and is a genuinely different evaluation angle (reads for meaning) from the project's exact-match evaluator, which we already found has real brittleness (the base-model prompt-echo bug in Decision 021).
+
+### Next
+Run it comparing the SFT-only run (0.37) vs. SFT+DPO run (0.51) -- need to transfer those two `results.csv` files back from RunPod first, since only the very first baseline result was ever copied to the Mac.

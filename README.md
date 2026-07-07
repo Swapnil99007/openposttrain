@@ -318,4 +318,21 @@ A real, controlled +14-point improvement, concentrated exactly where the prefere
 
 ### Next Step
 
-The core post-training arc (baseline -> SFT -> DPO, 0.03 -> 0.37 -> 0.51) is complete and documented end to end. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push further.
+The core post-training arc (baseline -> SFT -> DPO, 0.03 -> 0.37 -> 0.51) is complete and documented end to end. Next: LLM-as-judge evaluation (below).
+
+## LLM-as-Judge Evaluation
+
+Pairwise comparison using Claude as a judge, instead of exact-match string parsing -- reads two eval runs' `results.csv` files and asks Claude which candidate's reasoning is better for each matching question. Runs entirely on the Mac, no GPU needed.
+
+    export ANTHROPIC_API_KEY=sk-ant-...   # or put it in .env (see .env.example)
+    PYTHONPATH=src python scripts/run_llm_judge.py \
+      --run-a path/to/sft_run/results.csv --label-a "SFT" \
+      --run-b path/to/dpo_run/results.csv --label-b "SFT+DPO" \
+      --limit 30 \
+      --output reports/judge_sft_vs_dpo.csv
+
+Judge model is Claude Opus 4.8 by default (`--model` to override) -- see `DECISIONS.md` (Decision 023) for the cost/quality reasoning.
+
+### Next Step
+
+Consider serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.

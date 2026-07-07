@@ -477,3 +477,22 @@ The improvement is concentrated exactly where the preference data targeted it: `
 
 ### Status
 Accepted. This is now the project's best result across the full pipeline: raw base model (0.03) -> SFT (0.37) -> SFT + DPO (0.51).
+
+## Decision 023: LLM-as-judge pairwise evaluation, using Claude Opus 4.8
+
+### Decision
+Add `src/openposttrain/judge/` + `scripts/run_llm_judge.py`: a pairwise LLM-as-judge comparator that reads two eval runs' `results.csv` files, sends each matching question pair (question, gold solution, candidate A, candidate B) to Claude, and gets back a structured `{winner, reasoning_quality_score, explanation}` verdict via `client.messages.parse(output_format=JudgeVerdict)`.
+
+### Reason
+This is a genuinely different evaluation methodology from the project's exact-match evaluator (which reads for a specific number in a specific spot, and which Decision 021 already showed has real brittleness -- the base-model prompt-echo bug). An LLM judge reads for meaning: it can assess reasoning quality even when the string-matching heuristic would misfire, and produces pairwise comparisons (not just per-run accuracy). It's also literally one of the named skills on the Liquid AI job application that motivated starting this project.
+
+### Model Choice
+Claude Opus 4.8. Estimated cost per comparison (~800 input / ~150 output tokens): even 100 comparisons is well under $1 with Opus, so at this project's scale, judgment quality mattered more than the cost delta vs. Haiku/Sonnet -- a deliberate choice, not a default, since downgrading model choice for cost savings that don't materially matter isn't a good tradeoff to make silently.
+
+### Design Notes
+- Reuses existing `results.csv` outputs directly -- no new generation needed, runs entirely on the Mac, no RunPod/GPU required.
+- Retries on judge failure (up to 2x) rather than silently dropping a malformed verdict from the aggregate.
+- Pairs rows by index across the two CSVs, with a question-text equality check as a safety guard against accidentally comparing mismatched eval runs.
+
+### Status
+Accepted.

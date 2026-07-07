@@ -471,4 +471,18 @@ A real, controlled +14-point improvement on top of the SFT result, concentrated 
 
 ### Next Design Step
 
-The core post-training arc (baseline -> SFT -> DPO) is complete and documented end to end. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push further.
+Done -- see "LLM-as-Judge Evaluation" below.
+
+## LLM-as-Judge Evaluation
+
+Files:
+
+- `src/openposttrain/judge/schemas.py` -- `JudgeVerdict` Pydantic model (`winner`, `reasoning_quality_score`, `explanation`).
+- `src/openposttrain/judge/llm_judge.py` -- `judge_pair()`: calls Claude via `client.messages.parse(output_format=JudgeVerdict)` for automatic schema validation, retries on failure.
+- `scripts/run_llm_judge.py` -- CLI: reads two eval runs' `results.csv` files, pairs matching questions, judges each, aggregates win rates, saves per-question verdicts.
+
+Purpose: a genuinely different evaluation angle from the project's exact-match evaluator -- reads for reasoning quality rather than string-matching a number, and produces pairwise (not just per-run) comparisons. No RunPod/GPU needed; runs entirely on the Mac against existing eval outputs. See Decision 023 for the model-choice reasoning (Claude Opus 4.8).
+
+### Next Design Step
+
+The core post-training arc (baseline -> SFT -> DPO) plus LLM-as-judge evaluation are both done. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.
