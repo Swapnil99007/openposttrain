@@ -451,3 +451,29 @@ A real, dramatic, well-diagnosed improvement -- not just a higher number, but a 
 
 ### Status
 Accepted.
+
+## Decision 022: DPO on top of the SFT'd base model improves accuracy further (0.37 -> 0.51)
+
+### Decision
+Continue the SFT LoRA adapter with DPO (Stage 19), using on-policy preference pairs generated from the SFT'd model's own completions (see `src/openposttrain/data/gsm8k_dpo.py`): for GSM8K training questions where the model's own greedy completion was wrong, `chosen` = the gold reasoning already prepared for SFT, `rejected` = the model's actual wrong completion.
+
+### Data
+300 training + 50 validation candidate questions (reused from the SFT training pool, not the held-out `test` split -- Decision 018 discipline maintained). After filtering to wrong-only: **199 train pairs, 31 validation pairs** (~65% of candidates were wrong, consistent with the ~63% failure rate observed in the SFT eval).
+
+### Training
+Continued the existing SFT adapter directly (`AutoPeftModelForCausalLM.from_pretrained(..., is_trainable=True)`, no fresh `peft_config`, per TRL's documented pattern) rather than starting a new adapter -- `beta=0.1`, `learning_rate=1e-5`. Notably, `eval_loss` decreased monotonically across all 3 epochs (0.2398 -> 0.1421 -> 0.1116), unlike every SFT run, which all showed overfitting (eval_loss rising after epoch 1). `rewards/accuracies` climbed to ~97-100%, meaning the model almost perfectly learned to prefer chosen over rejected on this dataset -- worth noting some of that separation is "easy" (some rejected samples are pure degenerate garbage, e.g. one is `"ystatechangeuser"` repeated ~180 times, trivially distinguishable from fluent correct reasoning), not just the harder case of two fluent answers where only one is right.
+
+### Result
+
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base zero-shot | 3 | 25 | 0 | 72 | 0.03 |
+| Base + SFT | 37 | 10 | 1 | 52 | 0.37 |
+| **Base + SFT + DPO** | **51** | 10 | 3 | 36 | **0.51** |
+
+Same eval settings as the SFT result (no repetition_penalty, bf16, same 100 test questions) -- a directly controlled comparison (Decision 012). Inspected completions: clean, correct, well-structured step-by-step reasoning, not gamed formatting.
+
+The improvement is concentrated exactly where the preference data targeted it: `wrong_numeric_answer` dropped from 52 -> 36 (fixing genuine close-but-wrong reasoning). `no_numeric_answer` (the residual degenerate-loop tendency) stayed flat at 10 -- DPO corrected reasoning errors but did not eliminate the occasional generation collapse. `format_violation` ticked up slightly (1 -> 3), within noise.
+
+### Status
+Accepted. This is now the project's best result across the full pipeline: raw base model (0.03) -> SFT (0.37) -> SFT + DPO (0.51).

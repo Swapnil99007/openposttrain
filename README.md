@@ -296,4 +296,26 @@ A real, dramatic, qualitative improvement -- from a model that doesn't attempt t
 
 ### Next Step
 
-Both SFT tracks are documented (Instruct: regression, Base: success) -- together they show *when* SFT helps vs. hurts, which is the stronger interview story. Next candidates: Stage 19 (DPO) or synthetic/self-distilled data generation.
+Both SFT tracks are documented (Instruct: regression, Base: success) -- together they show *when* SFT helps vs. hurts, which is the stronger interview story. Next: DPO (below).
+
+## DPO on the SFT'd Model (Stage 19)
+
+Continues the SFT adapter with preference tuning, using on-policy pairs generated from the SFT'd model's own completions -- for training questions it gets wrong, `chosen` = gold reasoning, `rejected` = its actual wrong completion:
+
+    PYTHONPATH=src python scripts/prepare_gsm8k_dpo_data.py --config configs/data_gsm8k_dpo.yaml
+    PYTHONPATH=src python scripts/train_dpo.py --config configs/train_dpo_qwen2_5_1_5b_gsm8k.yaml
+    PYTHONPATH=src python scripts/run_eval.py --config configs/eval_gsm8k_qwen2_5_1_5b_base_dpo.yaml
+
+### Result
+
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base zero-shot | 3 | 25 | 0 | 72 | 0.03 |
+| Base + SFT | 37 | 10 | 1 | 52 | 0.37 |
+| **Base + SFT + DPO** | **51** | 10 | 3 | 36 | **0.51** |
+
+A real, controlled +14-point improvement, concentrated exactly where the preference data targeted it: `wrong_numeric_answer` dropped 52 -> 36 (fixed genuine close-but-wrong reasoning). `no_numeric_answer` (occasional generation collapse) was untouched -- an honest, specific result rather than a blanket improvement. See `DECISIONS.md` (Decision 022) for the full detail, including a training-dynamics note: unlike every SFT run, `eval_loss` decreased monotonically across all 3 epochs with no overfitting.
+
+### Next Step
+
+The core post-training arc (baseline -> SFT -> DPO, 0.03 -> 0.37 -> 0.51) is complete and documented end to end. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push further.

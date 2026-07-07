@@ -446,4 +446,29 @@ A real, qualitative improvement: from "doesn't attempt the task" (degenerate rep
 
 ### Next Design Step
 
-Both SFT tracks are now documented (Instruct: regression, Decision 020; Base: real success, Decision 021), together demonstrating *when* SFT helps vs. hurts. Next candidates: Stage 19 (DPO) or synthetic/self-distilled data generation.
+Done -- see "DPO on the SFT'd Base Model" below.
+
+## DPO on the SFT'd Base Model (Stage 19)
+
+Files:
+
+- `src/openposttrain/data/gsm8k_dpo.py` -- generates on-policy `(prompt, chosen, rejected)` pairs by running the SFT'd model over GSM8K training prompts (reusing prompts/gold answers already prepared for SFT) and keeping only cases where the model's own greedy completion is wrong.
+- `configs/data_gsm8k_dpo.yaml`, `scripts/prepare_gsm8k_dpo_data.py` -- CLI for pair generation.
+- `src/openposttrain/training/dpo.py`, `scripts/train_dpo.py` -- continues the existing SFT LoRA adapter with TRL's `DPOTrainer` (`AutoPeftModelForCausalLM.from_pretrained(..., is_trainable=True)`, no fresh `peft_config`) rather than starting a new adapter.
+- `configs/train_dpo_qwen2_5_1_5b_gsm8k.yaml`, `configs/eval_gsm8k_qwen2_5_1_5b_base_dpo.yaml`.
+
+Key design choice: **on-policy rejected samples**. Rather than pairing gold answers against some generic "bad" completion, `rejected` is the model's own actual wrong output for that exact question -- this targets DPO training directly at real, current failure modes.
+
+### Result
+
+| Run | Accuracy |
+|---|---:|
+| Base zero-shot | 0.03 |
+| Base + SFT | 0.37 |
+| **Base + SFT + DPO** | **0.51** |
+
+A real, controlled +14-point improvement on top of the SFT result, concentrated in fixing genuine close-but-wrong reasoning (`wrong_numeric_answer`: 52 -> 36); the residual degenerate-generation failure mode (`no_numeric_answer`) was untouched by DPO. Full diagnostic detail in Decision 022.
+
+### Next Design Step
+
+The core post-training arc (baseline -> SFT -> DPO) is complete and documented end to end. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push further.

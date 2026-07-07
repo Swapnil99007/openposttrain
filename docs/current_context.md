@@ -13,7 +13,7 @@ The goal is to build practical experience with:
 - later preference tuning / DPO
 
 ## Current Stage
-Two full SFT tracks are now done and documented, with contrasting outcomes -- see below. Next candidates: Stage 19 (DPO) or synthetic/self-distilled data generation.
+The full post-training arc is done: baseline -> SFT -> DPO, with the base-model track as the headline result (0.03 -> 0.37 -> 0.51). See below for the complete picture. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.
 
 ## Current Baseline
 
@@ -64,24 +64,7 @@ Remaining failures include:
 
 ## SFT Data Prepared
 
-General-purpose GSM8K SFT data has been generated (not yet the targeted failure-mode data):
-
-- `data/sft/gsm8k_train_small.jsonl` — 200 examples, GSM8K `train[0:200]`
-- `data/sft/gsm8k_val_small.jsonl` — 50 examples, GSM8K `train[200:250]`
-
-Both are chat-format JSONL (`{"messages": [...]}`), with the assistant turn ending in `Final Answer: <number>` to match the evaluator's parsing. GSM8K's `test` split was never touched, so it remains valid for an unbiased base-vs-SFT comparison later. See `docs/dataset_format.md`.
-
-## LoRA SFT Training Complete
-
-Trained a LoRA adapter (`outputs/sft/qwen2_5_1_5b_gsm8k_lora`) on `Qwen/Qwen2.5-1.5B-Instruct` using TRL's `SFTTrainer` + PEFT, 3 epochs over the 200/50 train/validation split.
-
-| Epoch | eval_loss | eval_mean_token_accuracy |
-|---:|---:|---:|
-| 1 | 0.3808 | 0.8822 |
-| 2 | 0.4005 | 0.8758 |
-| 3 | 0.4545 | 0.8707 |
-
-Overfitting after epoch 1 on this small dataset; `load_best_model_at_end` keeps the epoch-1 checkpoint automatically (verified via `md5sum`). `mean_token_accuracy` is a training proxy, not GSM8K exact-match accuracy.
+GSM8K SFT data generated at three sizes as the post-training investigation scaled up: `data/sft/gsm8k_train_small.jsonl` (200, used for Instruct-track v1), `..._medium.jsonl` (1500, v2), `..._full.jsonl` (7000, v3 and the base-model track). All are chat-format JSONL (`{"messages": [...]}`), assistant turn ending in `Final Answer: <number>` to match the evaluator's parsing. GSM8K's `test` split was never touched by any of these, so it stayed valid for base-vs-SFT comparison throughout. See `docs/dataset_format.md`.
 
 ## SFT Track 1: Instruct Model (Decision 020) -- documented regression
 
@@ -108,7 +91,19 @@ A real, dramatic, qualitative improvement: the raw model doesn't attempt the tas
 
 Two real bugs found and fixed along the way: (1) borrowing the Instruct model's chat template crashed on an unresolved PEFT/tied-embeddings interaction -- fixed by training on plain text instead of chat-formatted messages; (2) the same `repetition_penalty` settings used to diagnose the raw model's degenerate decoding were, when kept "for a controlled comparison," actively sabotaging the fine-tuned model's legitimate generation -- removing them for the SFT'd model's eval was the correct call, verified by inspecting completions. Full diagnostic path in `DECISIONS.md` Decision 021.
 
+## Stage 19: DPO on the SFT'd Base Model (Decision 022) -- further improvement
+
+Continued the SFT LoRA adapter with DPO, using on-policy preference pairs: for training questions the SFT'd model gets wrong, `chosen` = gold reasoning, `rejected` = the model's own actual wrong completion (targets real, current failure modes rather than generic bad answers).
+
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base zero-shot | 3 | 25 | 0 | 72 | 0.03 |
+| Base + SFT | 37 | 10 | 1 | 52 | 0.37 |
+| **Base + SFT + DPO** | **51** | 10 | 3 | 36 | **0.51** |
+
+A real, controlled +14-point improvement, concentrated specifically in fixing close-but-wrong reasoning (`wrong_numeric_answer`: 52 -> 36); the degenerate-generation failure mode (`no_numeric_answer`) was untouched. Training note: `eval_loss` decreased monotonically across all 3 epochs (no overfitting, unlike every SFT run). Both the SFT and DPO adapters were transferred off the ephemeral RunPod pod to the Mac (`outputs/sft/`, `outputs/dpo/`, both gitignored) so future pods can re-upload rather than retrain.
+
 ## Next Step
-Both tracks are documented -- together they show *when* SFT helps (teaching a genuinely missing skill) vs. hurts (overwriting existing tuned behavior with narrower data). Next candidates: Stage 19 (DPO) or synthetic/self-distilled data generation.
+The full post-training arc (baseline 0.03 -> SFT 0.37 -> DPO 0.51) is complete and documented end to end -- a strong, honest interview story showing both when SFT hurts (Instruct track) and when SFT + DPO together genuinely help (base-model track). Next candidates: serving/inference comparison (vLLM/TensorRT-LLM, ties to existing background), or synthetic/self-distilled data generation to push further.
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.

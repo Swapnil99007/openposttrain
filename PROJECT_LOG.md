@@ -539,3 +539,20 @@ DPO pair generation reuses part of the same GSM8K train pool already used for SF
 
 ### Next
 Run the 3-step sequence on RunPod: generate pairs, train, eval. Expect pair generation to take a while (300+50 candidates at ~8-14s/example based on prior eval timings).
+
+### Results
+- DPO pair generation: 199 train pairs / 31 validation pairs (from 300/50 candidates, ~65% wrong rate). Took ~86 min total (300 candidates: 73 min, 50 candidates: 13 min) -- generation itself is an eval-speed operation (one full completion per candidate), not a training operation.
+- DPO training: 3 epochs, ~5 min. `eval_loss` decreased monotonically (0.2398 -> 0.1421 -> 0.1116) -- no overfitting, unlike every SFT run. `rewards/accuracies` reached ~97-100%.
+- Eval (same settings as the SFT eval -- no repetition_penalty, bf16): **accuracy 0.51**, up from 0.37.
+
+### Key Finding
+DPO on top of the SFT'd base model gave a real, controlled **+14-point improvement (0.37 -> 0.51)**. Failure breakdown shows the improvement is specific, not blanket: `wrong_numeric_answer` dropped 52 -> 36 (fixing genuine close-but-wrong reasoning, exactly what the on-policy preference pairs targeted), while `no_numeric_answer` (residual degenerate-loop generation) stayed flat at 10 -- DPO didn't touch that failure mode. Inspected completions: clean, correct, genuine step-by-step reasoning.
+
+### Decision
+This is now the project's best full-pipeline result: raw base model (0.03) -> SFT (0.37) -> SFT + DPO (0.51). Full writeup in Decision 022.
+
+### Housekeeping
+Transferred both the SFT and DPO LoRA adapters back to the Mac via `runpodctl send`/`receive` (adapters are gitignored, so this is the only copy outside the ephemeral pod) -- a future fresh pod can re-upload them instead of retraining (~69 min for SFT, ~5 min for DPO, but the ~86 min DPO data-generation step would still need to be redone since raw completions aren't saved anywhere else).
+
+### Next
+Consider Stage 20 (serving/inference comparison, ties to existing vLLM/TensorRT-LLM background) or synthetic data generation as the next pipeline stage, or treat the post-training arc (baseline -> SFT -> DPO) as complete for now.
