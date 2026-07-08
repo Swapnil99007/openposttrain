@@ -1,0 +1,23 @@
+run_name: gsm8k_qwen2_5_1_5b_base_grpo_v2_512_tokens
+
+# Same as eval_gsm8k_qwen2_5_1_5b_base_grpo.yaml except adapter_path -- v2
+# uses a higher learning_rate and more epochs (Decision 027 follow-up). No
+# repetition_penalty, per Decision 021.
+model:
+  name: Qwen/Qwen2.5-1.5B
+  adapter_path: outputs/grpo/qwen2_5_1_5b_base_gsm8k_grpo_v2
+  dtype: bfloat16
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  device: auto
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

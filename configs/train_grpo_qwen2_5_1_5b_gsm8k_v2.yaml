@@ -1,0 +1,34 @@
+model:
+  dpo_adapter_path: outputs/dpo/qwen2_5_1_5b_base_gsm8k_dpo
+
+data:
+  train_path: data/grpo/gsm8k_train_prompts.jsonl
+  validation_path: data/grpo/gsm8k_val_prompts.jsonl
+
+# v1 (learning_rate=1e-6, 1 epoch) trained cleanly but landed statistically
+# flat against DPO (0.52 vs 0.51, wrong_numeric_answer unchanged -- Decision
+# 027). KL stayed very small the whole run (~0.0007-0.0015), suggesting
+# updates were too conservative to move the policy meaningfully. v2 changes
+# two levers at once (learning_rate and num_train_epochs) rather than
+# testing them separately -- a deliberate speed/rigor trade-off: fewer
+# RunPod round trips, at the cost of not knowing which lever mattered if
+# this works. Everything else unchanged from v1.
+training:
+  output_dir: outputs/grpo/qwen2_5_1_5b_base_gsm8k_grpo_v2
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 1.0e-5
+  beta: 0.02
+  num_generations: 4
+  max_completion_length: 400
+  temperature: 1.0
+  reward_weights: [0.8, 0.2]  # accuracy_reward, format_reward
+  logging_steps: 1
+  eval_strategy: epoch
+  save_strategy: epoch
+  bf16: true
+  seed: 42
+  report_to: none
+  use_vllm: false
