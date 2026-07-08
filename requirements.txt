@@ -48,7 +48,10 @@ shellingham==1.5.4
 six==1.17.0
 sympy==1.14.0
 tokenizers==0.22.2
-torch==2.12.1
+# torch intentionally not pinned here -- install separately from the
+# cu124 index matching the RunPod driver (see README/PROJECT_LOG); an
+# unpinned or PyPI-default torch install has previously resolved to a
+# CUDA version too new for the pod's driver.
 tqdm==4.68.3
 transformers==5.13.0
 typer==0.26.8
