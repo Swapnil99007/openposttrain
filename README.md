@@ -360,4 +360,11 @@ SFT and DPO above are both offline: trained against a fixed dataset built once a
     PYTHONPATH=src python scripts/prepare_gsm8k_grpo_data.py --config configs/data_gsm8k_grpo.yaml
     PYTHONPATH=src python scripts/train_grpo.py --config configs/train_grpo_qwen2_5_1_5b_gsm8k.yaml
 
-Status: code written, not yet run.
+### Result
+
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base + SFT + DPO | 51 | 10 | 3 | 36 | 0.51 |
+| Base + SFT + DPO + GRPO | 52 | 11 | 1 | 36 | 0.52 |
+
+Statistically flat, not an improvement: `wrong_numeric_answer` is identical (36 -> 36), and the +1 "correct" is within the ~5-point run-to-run noise already established for this eval (see DPO's non-determinism finding above). Training itself ran healthily end-to-end (stable reward/KL, no collapse) -- this demonstrates the online RL loop working correctly, even though this particular conservative config (500 prompts, `lr=1e-6`, 1 epoch) didn't move accuracy further on top of an already-strong DPO policy. Full analysis in `DECISIONS.md` (Decision 027).

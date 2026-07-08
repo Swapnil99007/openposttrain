@@ -622,5 +622,23 @@ Code written, reward functions sanity-checked locally (pure Python, no GPU). Not
 ### Next
 Run `prepare_gsm8k_grpo_data.py` then `train_grpo.py` on RunPod; watch for batch-size/num_generations issues on the first real run (config was written conservatively but unverified against actual GPU memory/speed).
 
+## 2026-07-08: GRPO run -- fresh RunPod setup issues, then a flat result
+
+### Environment issues (fresh pod, resolved in order)
+1. `requirements.txt` was frozen (`pip freeze`) from the Mac's Python 3.12+ venv -- `numpy==2.5.0` doesn't exist for the pod's Python 3.11. Relaxed to `numpy<2.5,>=1.26`.
+2. That same `pip install -r requirements.txt` also had an exact `torch==2.12.1` pin with no CUDA index, which silently overrode the correctly-installed cu124 torch with a CUDA-13-targeted build (the same class of bug from earlier in the project). Removed the torch pin from requirements.txt entirely; torch must be installed separately from the cu124 index.
+3. `trl` 1.7.1 (latest, unpinned) requires `torch.distributed.fsdp.FSDPModule`, a newer torch API not present in torch 2.4.1. Upgraded to torch 2.6.0+cu124 (confirmed available on the cu124 wheel index, and the version where FSDPModule became a stable public API).
+4. `torch==2.6.0 --force-reinstall --no-deps` skipped torch's own CUDA library deps, breaking the import (`libcusparseLt.so.0` missing). Reinstalled without `--no-deps`.
+5. Reinstalling torch left `torchvision`/`torchaudio` (still built against torch 2.4.1) broken, which crashed `transformers`' lazy import chain when loading `peft`. Uninstalled both -- this project doesn't use either.
+
+### Training
+Ran cleanly once the environment was fixed: 125 steps, ~31 minutes, `format_reward` pinned at 1.0 nearly every step, stable low KL (~0.0007-0.0015), no reward collapse.
+
+### Result
+GSM8K test-split eval: **0.52** (up from DPO's 0.51). Failure-type breakdown, though, shows this is a wash, not a real gain -- `wrong_numeric_answer` unchanged at 36, and the earlier-established ~5-point run-to-run noise on this eval (Decision 024) means +1 point isn't distinguishable from noise. Full analysis and honest interpretation in `DECISIONS.md` Decision 027.
+
+### Status
+Documented as a null result. GRPO training itself works correctly end-to-end (the actual capability gap this stage set out to demonstrate); this particular tuning just didn't clear the noise floor on top of an already-strong DPO baseline.
+
 ### Status
 The full arc (baseline 0.03 -> SFT 0.32 -> DPO 0.51, confirmed by LLM judge) is complete and documented. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.

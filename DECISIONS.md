@@ -560,3 +560,23 @@ SFT and DPO in this project are both offline: the model is trained against a fix
 
 ### Status
 Code written and reward functions sanity-checked locally (pure-Python, no GPU needed). Not yet run -- training itself needs to happen on RunPod. Batch-size/num_generations settings may need adjusting once we see real memory/speed behavior, consistent with how SFT and DPO configs were refined after their first real runs.
+
+## Decision 027: GRPO result -- flat against DPO, likely underpowered config
+
+### Decision
+Ran `configs/train_grpo_qwen2_5_1_5b_gsm8k.yaml` (500 train prompts, `num_generations=4`, `learning_rate=1e-6`, `beta=0.02`, 1 epoch), continuing the DPO adapter. Evaluated with the standard GSM8K test-split protocol (same 100 examples, no repetition_penalty) via `configs/eval_gsm8k_qwen2_5_1_5b_base_grpo.yaml`.
+
+### Result
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base + SFT | 32 | 17 | 2 | 49 | 0.32 |
+| Base + SFT + DPO | 51 | 10 | 3 | 36 | 0.51 |
+| Base + SFT + DPO + GRPO | 52 | 11 | 1 | 36 | 0.52 |
+
+### Interpretation
+`wrong_numeric_answer` is identical between DPO and GRPO (36 -> 36) -- the specific failure mode DPO improved didn't move further. The net +1 "correct" is a wash between `format_violation` dropping (3 -> 1) and `no_numeric_answer` rising (10 -> 11), not a consistent signal. Combined with the run-to-run noise already established for this 100-example eval (~5 points, Decision 024), **this result is statistically flat against DPO, not a demonstrated improvement.**
+
+This isn't a failure of the RL mechanism itself -- training metrics were healthy throughout (`format_reward` pinned at 1.0 every step, KL small and stable at ~0.0007-0.0015, no reward collapse or hacking). More likely the config was underpowered to move accuracy further on top of an already-strong DPO policy: only 500 train prompts, a deliberately conservative `learning_rate=1e-6`, and a single epoch. Training and eval logs are the artifact worth keeping regardless -- they demonstrate the actual online generate-grade-update loop working correctly end to end (the specific capability gap Decision 026 set out to close), even though this particular tuning didn't clear the noise floor.
+
+### Status
+Accepted as a documented, honestly-reported null result. Next iteration (if pursued) would try a higher learning rate, more train prompts, and/or more epochs -- not pursued further yet given RunPod time/cost.

@@ -495,7 +495,7 @@ Judged the SFT (0.32) vs. SFT+DPO (0.51) runs, 30 pairs: SFT+DPO won 13/30 (43.3
 
 The core post-training arc (baseline -> SFT -> DPO) plus LLM-as-judge evaluation are both done. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.
 
-## GRPO (RL) -- in progress
+## GRPO (RL)
 
 Files:
 
@@ -504,6 +504,10 @@ Files:
 - `src/openposttrain/training/grpo.py`, `scripts/train_grpo.py` -- continues the DPO adapter via `AutoPeftModelForCausalLM`, same pattern DPO used to continue SFT.
 
 Purpose: SFT and DPO are both offline (fixed dataset, no generation during training). GRPO is the project's first genuinely online RL loop -- generate, grade, update, repeat -- which is the specific pattern named across current OpenAI/Anthropic post-training job postings and was otherwise entirely absent from the project. See Decision 026 for full design reasoning.
+
+### Result
+
+First-pass config (500 train prompts, `lr=1e-6`, 1 epoch) trained cleanly (stable reward/KL, no collapse) but landed at 0.52 on the standard eval, statistically flat against DPO's 0.51 -- `wrong_numeric_answer` was unchanged (36 -> 36). Read as evidence the config was underpowered (very conservative learning rate, limited data/epochs) rather than a failure of the RL mechanism itself. Full analysis in Decision 027.
 
 ### Next Design Step
 

@@ -111,13 +111,15 @@ A real, controlled **+19-point** improvement, on *both* failure modes: `wrong_nu
 
 Ran the pairwise judge (Claude Opus 4.8) on the SFT (0.32) vs. SFT+DPO (0.51) run, 30 questions: **SFT+DPO won 13/30 (43.3%), SFT won 5/30 (16.7%), tie 12/30 (40.0%)**. An independent, reasoning-quality-based method (not string-matching a number) confirms the same direction as the exact-match accuracy gap -- the DPO improvement isn't an artifact of the evaluator's parsing rules. Per-question verdicts in `reports/judge_sft_vs_dpo.csv`.
 
-## Stage 20: GRPO (RL), in progress (Decision 026)
+## Stage 20: GRPO (RL) -- run, result is flat (Decisions 026, 027)
 
 SFT and DPO are both offline (trained against a fixed dataset built once ahead of time). GRPO is online RL: the model generates a completion live during training, a reward function scores it immediately, and the policy updates from that score. This closes a real gap -- the OpenAI Agent Post-Training and Anthropic Post-Training job postings this project is aimed at all center on exactly this loop (environments, graders, reward signals), which nothing built so far demonstrates.
 
-Design: continues the DPO adapter via `AutoPeftModelForCausalLM`, reward functions reuse the existing GSM8K evaluator's `extract_model_answer` directly (no new grading code), data is fresh `(prompt, ground_truth)` pairs from GSM8K train rows 350-900. Code is written and reward functions are sanity-checked locally; not yet run on RunPod. Full detail in `DECISIONS.md` Decision 026.
+Design: continues the DPO adapter via `AutoPeftModelForCausalLM`, reward functions reuse the existing GSM8K evaluator's `extract_model_answer` directly (no new grading code), data is fresh `(prompt, ground_truth)` pairs from GSM8K train rows 350-900.
+
+Ran on a fresh RunPod pod (several environment issues along the way: a numpy pin incompatible with the pod's Python 3.11, a torch pin that silently reverted the cu124 install to a wrong CUDA build, `trl` needing a newer torch than the driver-matched version, and stale torchvision/torchaudio breaking the import chain after the torch upgrade -- all resolved). Training itself ran cleanly (stable reward/KL, no collapse), but the result is **0.52 vs. DPO's 0.51 -- statistically flat**, not a real improvement: `wrong_numeric_answer` was unchanged (36 -> 36), and the gain is within the ~5-point run-to-run noise already established for this eval (Decision 024). Read as an underpowered first-pass config (500 prompts, `lr=1e-6`, 1 epoch) rather than a failed mechanism -- the online generate-grade-update loop itself works correctly, which was the actual capability gap this stage set out to demonstrate. Full detail in `DECISIONS.md` Decisions 026-027.
 
 ## Next Step
-Run `scripts/prepare_gsm8k_grpo_data.py` then `scripts/train_grpo.py` on RunPod, watch for batch-size/num_generations issues on the first real run, then eval the resulting adapter against the 0.51 DPO baseline.
+Decide whether to retune GRPO (higher learning rate is the most likely lever, since KL stayed very small throughout -- suggesting updates were too conservative) or accept the current result and move to a different next stage (serving/inference comparison, or synthetic data).
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.
