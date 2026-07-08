@@ -607,3 +607,20 @@ An independent evaluation method (judged reasoning quality, not string-matched f
 
 ### Status
 The full arc (baseline 0.03 -> SFT 0.32 -> DPO 0.51, confirmed by LLM judge) is complete and documented. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.
+
+## 2026-07-07: Stage 20 -- GRPO (RL) design, continuing the DPO adapter
+
+### Motivation
+Reviewed several current OpenAI (Agent Post-Training) and Anthropic (Research Engineer, Post-Training) job postings. Their language centers on environments, graders, reward signals, and RL -- a structurally different, online loop (generate -> grade -> update -> repeat) from the offline SFT/DPO built so far (both train against a dataset fixed ahead of time). Decided to add a GRPO stage to close that specific gap, since it's the one capability area completely missing from the project.
+
+### Design
+Wrote `src/openposttrain/data/gsm8k_grpo.py`, `src/openposttrain/training/grpo.py`, `src/openposttrain/training/grpo_rewards.py`, `scripts/prepare_gsm8k_grpo_data.py`, `scripts/train_grpo.py`, `configs/data_gsm8k_grpo.yaml`, `configs/train_grpo_qwen2_5_1_5b_gsm8k.yaml`. Reward functions reuse the existing GSM8K evaluator's `extract_model_answer` directly rather than new grading code. Continues the DPO adapter (same `AutoPeftModelForCausalLM` pattern DPO used on SFT). Sourced the current `GRPOTrainer`/`GRPOConfig` API from TRL's docs before writing code (real API churn since the last time this was checked). Full reasoning in `DECISIONS.md` Decision 026.
+
+### Status
+Code written, reward functions sanity-checked locally (pure Python, no GPU). Not yet run on RunPod.
+
+### Next
+Run `prepare_gsm8k_grpo_data.py` then `train_grpo.py` on RunPod; watch for batch-size/num_generations issues on the first real run (config was written conservatively but unverified against actual GPU memory/speed).
+
+### Status
+The full arc (baseline 0.03 -> SFT 0.32 -> DPO 0.51, confirmed by LLM judge) is complete and documented. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.

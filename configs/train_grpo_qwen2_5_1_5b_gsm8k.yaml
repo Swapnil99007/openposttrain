@@ -1,0 +1,33 @@
+model:
+  dpo_adapter_path: outputs/dpo/qwen2_5_1_5b_base_gsm8k_dpo
+
+data:
+  train_path: data/grpo/gsm8k_train_prompts.jsonl
+  validation_path: data/grpo/gsm8k_val_prompts.jsonl
+
+# Conservative first pass on a single RTX 3090:
+# - no vLLM (simpler and more predictable than colocate GPU-memory sharing
+#   on a first run; can revisit if plain HF generation is too slow)
+# - per_device_train_batch_size == num_generations (4) so one prompt's
+#   generations exactly fill a device batch, avoiding divisibility issues
+# - low learning_rate (1e-6) since this continues an already-tuned DPO
+#   adapter, not a fresh model -- RL updates can move weights fast
+training:
+  output_dir: outputs/grpo/qwen2_5_1_5b_base_gsm8k_grpo
+  num_train_epochs: 1
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 1.0e-6
+  beta: 0.02
+  num_generations: 4
+  max_completion_length: 400
+  temperature: 1.0
+  reward_weights: [0.8, 0.2]  # accuracy_reward, format_reward
+  logging_steps: 1
+  eval_strategy: epoch
+  save_strategy: epoch
+  bf16: true
+  seed: 42
+  report_to: none
+  use_vllm: false

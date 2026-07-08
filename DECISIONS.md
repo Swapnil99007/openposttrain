@@ -542,3 +542,21 @@ The judge's preference for SFT+DPO (13 vs. 5, ~2.6x) is directionally consistent
 
 ### Status
 Accepted. Full per-question verdicts saved to `reports/judge_sft_vs_dpo.csv`.
+
+## Decision 026: Add GRPO (RL) stage, continuing the DPO adapter
+
+### Decision
+Add `src/openposttrain/data/gsm8k_grpo.py`, `src/openposttrain/training/grpo.py`, `src/openposttrain/training/grpo_rewards.py`, `scripts/prepare_gsm8k_grpo_data.py`, `scripts/train_grpo.py` -- a GRPO (Group Relative Policy Optimization) stage that continues the SFT+DPO adapter with online RL, using TRL's `GRPOTrainer`.
+
+### Reason
+SFT and DPO in this project are both offline: the model is trained against a fixed dataset built once ahead of time, never generating anything live during training. GRPO is structurally different -- the model generates a completion during training, a reward function scores it immediately, and the policy updates from that live score, repeating in a loop. This "environment + grader + reward signal" loop is the specific pattern named across OpenAI's Agent Post-Training postings and Anthropic's Research Engineer, Post-Training role (RLHF/RLAIF, training environments, graders), and is the one capability area completely missing from the project before this stage.
+
+### Design
+- **Reward functions** (`grpo_rewards.py`): `accuracy_reward` and `format_reward` reuse `extract_model_answer` from the existing GSM8K evaluator (Decision 021) directly -- no new grading logic written. `accuracy_reward` compares the extracted number to `ground_truth`; `format_reward` checks for the "Final Answer:" marker the evaluator already expects. Combined via `reward_weights: [0.8, 0.2]` (accuracy weighted higher; format is a shaping signal).
+- **Data** (`gsm8k_grpo.py`, `configs/data_gsm8k_grpo.yaml`): only needs `(prompt, ground_truth)` pairs, not gold reasoning text, since reward is computed from the model's own live generation. Drawn from GSM8K's `train` split rows 350-900 -- still `train`, never `test` (Decision 018), but a different slice than DPO's pairs (rows 0-350 of the same pool) to avoid pure re-training on exactly what DPO already used.
+- **Trainer** (`grpo.py`, `train_grpo.py`): continues the existing DPO adapter via `AutoPeftModelForCausalLM.from_pretrained(dpo_adapter_path, is_trainable=True)`, the same continuation pattern DPO used on top of SFT.
+- **First-pass config** (conservative, single RTX 3090): `use_vllm=False` (avoid colocate GPU-memory-sharing complexity on the first run), `num_generations=4`, `per_device_train_batch_size=4` (== num_generations, so one prompt's generations exactly fill a device batch), `learning_rate=1e-6` (low -- refining an already-tuned policy, not training from scratch), nonzero `beta=0.02` (TRL's default is 0.0 = no KL regularization, appropriate for training from scratch; a small pull back toward the DPO policy seemed safer here).
+- Sourced the current `GRPOTrainer`/`GRPOConfig` API from TRL's docs before writing code (same practice as the DPO stage) rather than assuming a remembered signature, since this API has had real churn (e.g. `loss_type` default changed to `"dapo"`, `scale_rewards` default changed to `"group"`).
+
+### Status
+Code written and reward functions sanity-checked locally (pure-Python, no GPU needed). Not yet run -- training itself needs to happen on RunPod. Batch-size/num_generations settings may need adjusting once we see real memory/speed behavior, consistent with how SFT and DPO configs were refined after their first real runs.

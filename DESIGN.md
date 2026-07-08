@@ -494,3 +494,17 @@ Judged the SFT (0.32) vs. SFT+DPO (0.51) runs, 30 pairs: SFT+DPO won 13/30 (43.3
 ### Next Design Step
 
 The core post-training arc (baseline -> SFT -> DPO) plus LLM-as-judge evaluation are both done. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.
+
+## GRPO (RL) -- in progress
+
+Files:
+
+- `src/openposttrain/data/gsm8k_grpo.py` -- builds `(prompt, ground_truth)` records (no gold reasoning text needed, unlike SFT/DPO).
+- `src/openposttrain/training/grpo_rewards.py` -- `accuracy_reward()` and `format_reward()`, both reusing `extract_model_answer()` from the existing evaluator rather than new grading logic.
+- `src/openposttrain/training/grpo.py`, `scripts/train_grpo.py` -- continues the DPO adapter via `AutoPeftModelForCausalLM`, same pattern DPO used to continue SFT.
+
+Purpose: SFT and DPO are both offline (fixed dataset, no generation during training). GRPO is the project's first genuinely online RL loop -- generate, grade, update, repeat -- which is the specific pattern named across current OpenAI/Anthropic post-training job postings and was otherwise entirely absent from the project. See Decision 026 for full design reasoning.
+
+### Next Design Step
+
+Run data prep + training on RunPod, verify the conservative first-pass config (no vLLM, `num_generations=4`) actually fits and trains, then eval the resulting adapter against the 0.51 DPO baseline.

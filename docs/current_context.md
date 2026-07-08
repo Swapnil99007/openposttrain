@@ -111,7 +111,13 @@ A real, controlled **+19-point** improvement, on *both* failure modes: `wrong_nu
 
 Ran the pairwise judge (Claude Opus 4.8) on the SFT (0.32) vs. SFT+DPO (0.51) run, 30 questions: **SFT+DPO won 13/30 (43.3%), SFT won 5/30 (16.7%), tie 12/30 (40.0%)**. An independent, reasoning-quality-based method (not string-matching a number) confirms the same direction as the exact-match accuracy gap -- the DPO improvement isn't an artifact of the evaluator's parsing rules. Per-question verdicts in `reports/judge_sft_vs_dpo.csv`.
 
+## Stage 20: GRPO (RL), in progress (Decision 026)
+
+SFT and DPO are both offline (trained against a fixed dataset built once ahead of time). GRPO is online RL: the model generates a completion live during training, a reward function scores it immediately, and the policy updates from that score. This closes a real gap -- the OpenAI Agent Post-Training and Anthropic Post-Training job postings this project is aimed at all center on exactly this loop (environments, graders, reward signals), which nothing built so far demonstrates.
+
+Design: continues the DPO adapter via `AutoPeftModelForCausalLM`, reward functions reuse the existing GSM8K evaluator's `extract_model_answer` directly (no new grading code), data is fresh `(prompt, ground_truth)` pairs from GSM8K train rows 350-900. Code is written and reward functions are sanity-checked locally; not yet run on RunPod. Full detail in `DECISIONS.md` Decision 026.
+
 ## Next Step
-The full post-training arc (baseline 0.03 -> SFT 0.32 -> DPO 0.51) plus LLM-as-judge confirmation is complete and documented end to end, including an honest correction after re-verifying an assumption -- a strong interview story showing both when SFT hurts (Instruct track), when SFT + DPO together genuinely help (base-model track, confirmed by two independent evaluation methods), and that single point-estimate accuracy numbers carry real run-to-run variance worth disclosing. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM, ties to existing background), or synthetic/self-distilled data generation to push further.
+Run `scripts/prepare_gsm8k_grpo_data.py` then `scripts/train_grpo.py` on RunPod, watch for batch-size/num_generations issues on the first real run, then eval the resulting adapter against the 0.51 DPO baseline.
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.

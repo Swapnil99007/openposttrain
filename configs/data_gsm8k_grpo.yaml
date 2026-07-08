@@ -1,0 +1,28 @@
+dataset:
+  name: openai/gsm8k
+  subset: main
+
+# GRPO only needs (prompt, ground_truth) -- reward is computed live from the
+# model's own generation, not imitation of a fixed target, so no gold
+# reasoning text is needed. Draws from GSM8K's "train" split (never "test",
+# per Decision 018), rows 350-900 -- a different slice than DPO's pairs
+# (rows 0-350 of this same pool), so GRPO isn't just re-training on exactly
+# what DPO already trained on.
+splits:
+  train_split: train
+  validation_split: train
+
+limits:
+  train_limit: 500
+  validation_limit: 50
+
+offset:
+  train_offset: 350
+  validation_offset: 850
+
+prompt:
+  path: prompts/gsm8k_v1.txt
+
+output:
+  train_path: data/grpo/gsm8k_train_prompts.jsonl
+  validation_path: data/grpo/gsm8k_val_prompts.jsonl

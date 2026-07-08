@@ -352,3 +352,12 @@ Confirms the exact-match accuracy gain (0.32 -> 0.51) qualitatively: DPO wins on
 ### Next Step
 
 Consider serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.
+
+## GRPO (RL) -- in progress
+
+SFT and DPO above are both offline: trained against a fixed dataset built once ahead of time. GRPO is online RL -- the model generates a completion live during training, a reward function grades it immediately, and the policy updates from that score. Continues the DPO adapter; reward functions reuse the existing GSM8K evaluator's answer-extraction logic directly rather than new grading code. See `DECISIONS.md` (Decision 026) for the full design.
+
+    PYTHONPATH=src python scripts/prepare_gsm8k_grpo_data.py --config configs/data_gsm8k_grpo.yaml
+    PYTHONPATH=src python scripts/train_grpo.py --config configs/train_grpo_qwen2_5_1_5b_gsm8k.yaml
+
+Status: code written, not yet run.
