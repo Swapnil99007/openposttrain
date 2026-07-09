@@ -48,10 +48,14 @@ shellingham==1.5.4
 six==1.17.0
 sympy==1.14.0
 tokenizers==0.22.2
-# torch intentionally not pinned here -- install separately from the
-# cu124 index matching the RunPod driver (see README/PROJECT_LOG); an
-# unpinned or PyPI-default torch install has previously resolved to a
-# CUDA version too new for the pod's driver.
+# Pinned (no local +cu124 suffix) so pip recognizes an already-installed
+# cu124 build as satisfying this constraint and leaves it alone -- without
+# a pin here, trl/peft/accelerate's own unpinned torch dependency lets
+# pip's resolver silently "upgrade" to a newer default-PyPI build (wrong
+# CUDA version for the pod's driver) when this file is installed. Install
+# torch from the cu124 index FIRST (see README/PROJECT_LOG); this pin just
+# stops later installs from clobbering it.
+torch==2.6.0
 tqdm==4.68.3
 transformers==5.13.0
 typer==0.26.8

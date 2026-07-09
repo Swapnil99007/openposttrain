@@ -640,5 +640,19 @@ GSM8K test-split eval: **0.52** (up from DPO's 0.51). Failure-type breakdown, th
 ### Status
 Documented as a null result. GRPO training itself works correctly end-to-end (the actual capability gap this stage set out to demonstrate); this particular tuning just didn't clear the noise floor on top of an already-strong DPO baseline.
 
+## 2026-07-09: GRPO v2 (10x LR, 3x epochs) -- identical result, stage concluded
+
+### Setup note
+Restarted on a new RunPod pod; hit the torch-version issue again from a different angle -- `pip install -r requirements.txt` (no cu124 index) let trl/peft's unpinned torch dependency silently pull a CUDA-13 build (torch 2.13.0) even with the torch pin removed from requirements.txt. Fixed by reinstalling the correct `torch==2.6.0+cu124` build *last*, after `requirements.txt`, and re-pinning `torch==2.6.0` (no local suffix) in requirements.txt as a defensive measure. Also switched to running training under `nohup`/`tmux` after losing progress to a dropped connection the first time -- the `save_strategy: epoch` checkpointing only writes at epoch boundaries, so a lost connection mid-epoch loses that epoch's progress.
+
+### Training
+Ran `configs/train_grpo_qwen2_5_1_5b_gsm8k_v2.yaml` (learning_rate 1e-6 -> 1e-5, num_train_epochs 1 -> 3). 375 steps, ~92 minutes. KL grew an order of magnitude larger than v1 (~0.003-0.01 vs. ~0.0007-0.0015) -- genuinely more policy movement this time -- and in-training validation reward climbed to 0.58 (from v1's 0.52).
+
+### Result
+GSM8K test-split eval: **0.52** -- identical to v1, and not just the headline number: the full failure-type breakdown (correct/no_numeric_answer/format_violation/wrong_numeric_answer) matches v1 exactly. None of the extra training movement or validation-reward improvement transferred to the held-out benchmark.
+
+### Interpretation
+Two takeaways: (1) the in-training validation reward isn't a reliable stand-in for the real eval here -- it improved while the actual benchmark didn't move at all; (2) this DPO-then-GRPO recipe appears to have plateaued across the LR/epoch range tried -- two independently-configured runs landing on the identical result is stronger evidence of a real ceiling than either run alone. Full analysis in `DECISIONS.md` Decision 028.
+
 ### Status
-The full arc (baseline 0.03 -> SFT 0.32 -> DPO 0.51, confirmed by LLM judge) is complete and documented. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.
+Concluding the GRPO stage here rather than running a v3 -- two consistent data points is a more honest result than chasing a third config against a number that's already showing it isn't moving. Final GRPO-stage summary: baseline 0.03 -> SFT 0.32 -> DPO 0.51 -> GRPO 0.52 (within-noise, not a demonstrated further gain). The full post-training arc (baseline -> SFT -> DPO -> GRPO, confirmed for SFT/DPO by LLM judge) is complete and documented. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.

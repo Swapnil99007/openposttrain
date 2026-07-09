@@ -580,3 +580,25 @@ This isn't a failure of the RL mechanism itself -- training metrics were healthy
 
 ### Status
 Accepted as a documented, honestly-reported null result. Next iteration (if pursued) would try a higher learning rate, more train prompts, and/or more epochs -- not pursued further yet given RunPod time/cost.
+
+## Decision 028: GRPO v2 (10x LR, 3x epochs) -- identical result to v1, GRPO stage concluded
+
+### Decision
+Ran `configs/train_grpo_qwen2_5_1_5b_gsm8k_v2.yaml`: same 500 train prompts as v1, but `learning_rate` raised 1e-6 -> 1e-5 (10x) and `num_train_epochs` raised 1 -> 3, changing both levers at once as a deliberate speed/rigor trade-off (fewer RunPod round trips, at the cost of not knowing which lever would matter if it worked -- see Decision 027 follow-up discussion).
+
+### Result
+| Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Base + SFT + DPO | 51 | 10 | 3 | 36 | 0.51 |
+| Base + SFT + DPO + GRPO v1 | 52 | 11 | 1 | 36 | 0.52 |
+| Base + SFT + DPO + GRPO v2 | 52 | 11 | 1 | 36 | 0.52 |
+
+v2's failure-type breakdown is **identical** to v1's, not just the same accuracy -- every category matches exactly. This despite real, visible differences in training dynamics: v2's KL stayed an order of magnitude larger throughout (~0.003-0.01 vs. v1's ~0.0007-0.0015, i.e. genuinely more policy movement), and the in-training validation-set reward climbed further (`eval_rewards/accuracy_reward/mean` 0.52 -> 0.58 from v1 to v2). None of that additional movement showed up on the held-out 100-example test split.
+
+### Interpretation
+Two conclusions, both worth taking at face value rather than explaining away:
+1. **The in-training val-set reward is not a reliable proxy for the held-out benchmark here.** v2 looked meaningfully better by its own validation metric but didn't move the actual eval at all -- a caution against reading training curves as if they were the real result.
+2. **This DPO-then-GRPO recipe has plateaued on this eval**, at least across the range of learning rates and epoch counts tried. More aggressive tuning within the same shape of config (same 500 prompts, same reward functions, just higher LR/more epochs) is unlikely to be the lever that moves this further -- a different data source, different reward shaping, or a genuinely different intervention would be needed, not more of the same knob-turning.
+
+### Status
+Concluding the GRPO stage here rather than running a v3. Two consistent data points (v1, v2) at 0.52 is a more useful, honest result than a third run chasing a number that two independent configs already agree isn't moving. Full GRPO stage summary: baseline 0.03 -> SFT 0.32 -> DPO 0.51 -> GRPO 0.52, with GRPO's contribution honestly reported as within-noise rather than a demonstrated further gain.

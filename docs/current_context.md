@@ -13,7 +13,7 @@ The goal is to build practical experience with:
 - later preference tuning / DPO
 
 ## Current Stage
-The full post-training arc is done: baseline -> SFT -> DPO, with the base-model track as the headline result (0.03 -> 0.37 -> 0.51). See below for the complete picture. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.
+The full post-training arc is done: baseline -> SFT -> DPO -> GRPO, with the base-model track as the headline result (0.03 -> 0.32 -> 0.51 -> 0.52). See below for the complete picture, including the corrected SFT number and the honest GRPO plateau finding. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.
 
 ## Current Baseline
 
@@ -111,15 +111,20 @@ A real, controlled **+19-point** improvement, on *both* failure modes: `wrong_nu
 
 Ran the pairwise judge (Claude Opus 4.8) on the SFT (0.32) vs. SFT+DPO (0.51) run, 30 questions: **SFT+DPO won 13/30 (43.3%), SFT won 5/30 (16.7%), tie 12/30 (40.0%)**. An independent, reasoning-quality-based method (not string-matching a number) confirms the same direction as the exact-match accuracy gap -- the DPO improvement isn't an artifact of the evaluator's parsing rules. Per-question verdicts in `reports/judge_sft_vs_dpo.csv`.
 
-## Stage 20: GRPO (RL) -- run, result is flat (Decisions 026, 027)
+## Stage 20: GRPO (RL) -- concluded, plateau at 0.52 (Decisions 026-028)
 
 SFT and DPO are both offline (trained against a fixed dataset built once ahead of time). GRPO is online RL: the model generates a completion live during training, a reward function scores it immediately, and the policy updates from that score. This closes a real gap -- the OpenAI Agent Post-Training and Anthropic Post-Training job postings this project is aimed at all center on exactly this loop (environments, graders, reward signals), which nothing built so far demonstrates.
 
 Design: continues the DPO adapter via `AutoPeftModelForCausalLM`, reward functions reuse the existing GSM8K evaluator's `extract_model_answer` directly (no new grading code), data is fresh `(prompt, ground_truth)` pairs from GSM8K train rows 350-900.
 
-Ran on a fresh RunPod pod (several environment issues along the way: a numpy pin incompatible with the pod's Python 3.11, a torch pin that silently reverted the cu124 install to a wrong CUDA build, `trl` needing a newer torch than the driver-matched version, and stale torchvision/torchaudio breaking the import chain after the torch upgrade -- all resolved). Training itself ran cleanly (stable reward/KL, no collapse), but the result is **0.52 vs. DPO's 0.51 -- statistically flat**, not a real improvement: `wrong_numeric_answer` was unchanged (36 -> 36), and the gain is within the ~5-point run-to-run noise already established for this eval (Decision 024). Read as an underpowered first-pass config (500 prompts, `lr=1e-6`, 1 epoch) rather than a failed mechanism -- the online generate-grade-update loop itself works correctly, which was the actual capability gap this stage set out to demonstrate. Full detail in `DECISIONS.md` Decisions 026-027.
+Ran twice on RunPod (several environment issues along the way both times -- numpy/Python-version mismatch, a torch pin silently reverting the cu124 install, `trl` needing a newer torch than initially installed, stale torchvision/torchaudio breaking the import chain, and pip's resolver re-clobbering torch a second time via an unpinned transitive dependency -- all resolved, see PROJECT_LOG for the full sequence):
+
+- **v1** (500 prompts, `lr=1e-6`, 1 epoch): trained cleanly, landed at 0.52 vs. DPO's 0.51 -- within the ~5-point run-to-run noise already established for this eval (Decision 024), so statistically flat.
+- **v2** (`lr=1e-5`, 3 epochs -- 10x/3x v1): genuinely more policy movement during training (KL an order of magnitude larger, in-training val reward up to 0.58), but landed on the **exact same failure-type breakdown as v1** on the held-out eval -- none of that extra movement transferred.
+
+Two independently-tuned configs converging on an identical result is stronger evidence of a real plateau than either alone. The online generate-grade-update loop itself works correctly end to end (the actual capability gap this stage set out to demonstrate) -- this particular recipe (500 GSM8K prompts, exact-match + format reward, continuing an already-strong DPO policy) just isn't moving this eval further within the LR/epoch range tried. Concluded the stage here rather than run a v3. Full detail in `DECISIONS.md` Decisions 026-028.
 
 ## Next Step
-Decide whether to retune GRPO (higher learning rate is the most likely lever, since KL stayed very small throughout -- suggesting updates were too conservative) or accept the current result and move to a different next stage (serving/inference comparison, or synthetic data).
+GRPO stage concluded. Move to a different next stage: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation.
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.

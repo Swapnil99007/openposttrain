@@ -507,8 +507,8 @@ Purpose: SFT and DPO are both offline (fixed dataset, no generation during train
 
 ### Result
 
-First-pass config (500 train prompts, `lr=1e-6`, 1 epoch) trained cleanly (stable reward/KL, no collapse) but landed at 0.52 on the standard eval, statistically flat against DPO's 0.51 -- `wrong_numeric_answer` was unchanged (36 -> 36). Read as evidence the config was underpowered (very conservative learning rate, limited data/epochs) rather than a failure of the RL mechanism itself. Full analysis in Decision 027.
+First-pass config v1 (500 train prompts, `lr=1e-6`, 1 epoch) trained cleanly (stable reward/KL, no collapse) but landed at 0.52 on the standard eval, statistically flat against DPO's 0.51 -- `wrong_numeric_answer` was unchanged (36 -> 36). A follow-up v2 (`lr=1e-5`, 3 epochs -- 10x/3x v1) showed genuinely more policy movement during training (KL an order of magnitude larger, in-training val reward up to 0.58) but landed on the **exact same failure-type breakdown as v1** on the held-out eval. Two independently-tuned configs converging on an identical result is stronger evidence of a real plateau on this eval than either run alone -- concluded the GRPO stage here rather than continue tuning. Full analysis in Decisions 027-028.
 
 ### Next Design Step
 
-Run data prep + training on RunPod, verify the conservative first-pass config (no vLLM, `num_generations=4`) actually fits and trains, then eval the resulting adapter against the 0.51 DPO baseline.
+GRPO stage concluded. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation.

@@ -353,7 +353,7 @@ Confirms the exact-match accuracy gain (0.32 -> 0.51) qualitatively: DPO wins on
 
 Consider serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.
 
-## GRPO (RL) -- in progress
+## GRPO (RL)
 
 SFT and DPO above are both offline: trained against a fixed dataset built once ahead of time. GRPO is online RL -- the model generates a completion live during training, a reward function grades it immediately, and the policy updates from that score. Continues the DPO adapter; reward functions reuse the existing GSM8K evaluator's answer-extraction logic directly rather than new grading code. See `DECISIONS.md` (Decision 026) for the full design.
 
@@ -362,9 +362,12 @@ SFT and DPO above are both offline: trained against a fixed dataset built once a
 
 ### Result
 
+Two configs tried -- v1 (conservative: `lr=1e-6`, 1 epoch) and v2 (`lr=1e-5`, 3 epochs) -- both continuing the same DPO adapter over the same 500 training prompts:
+
 | Run | Correct | no_numeric_answer | format_violation | wrong_numeric_answer | Accuracy |
 |---|---:|---:|---:|---:|---:|
 | Base + SFT + DPO | 51 | 10 | 3 | 36 | 0.51 |
-| Base + SFT + DPO + GRPO | 52 | 11 | 1 | 36 | 0.52 |
+| Base + SFT + DPO + GRPO v1 | 52 | 11 | 1 | 36 | 0.52 |
+| Base + SFT + DPO + GRPO v2 | 52 | 11 | 1 | 36 | 0.52 |
 
-Statistically flat, not an improvement: `wrong_numeric_answer` is identical (36 -> 36), and the +1 "correct" is within the ~5-point run-to-run noise already established for this eval (see DPO's non-determinism finding above). Training itself ran healthily end-to-end (stable reward/KL, no collapse) -- this demonstrates the online RL loop working correctly, even though this particular conservative config (500 prompts, `lr=1e-6`, 1 epoch) didn't move accuracy further on top of an already-strong DPO policy. Full analysis in `DECISIONS.md` (Decision 027).
+v1's +1 point is within the ~5-point run-to-run noise already established for this eval (see DPO's non-determinism finding above) -- statistically flat, not an improvement. v2 (10x the learning rate, 3x the epochs) landed on the **exact same failure-type breakdown as v1**, despite genuinely more policy movement during training (KL an order of magnitude larger, in-training validation reward climbing to 0.58 vs. v1's 0.52) -- that extra movement didn't transfer to the held-out benchmark at all. Read together, these two runs are stronger evidence of a real plateau than either alone: training itself works correctly end-to-end (the online generate-grade-update loop, stable reward/KL, no collapse in either run) -- this DPO-then-GRPO recipe just isn't moving this particular eval further within the LR/epoch range tried. Full analysis in `DECISIONS.md` (Decisions 027-028).
