@@ -102,6 +102,30 @@ def plot_judge_win_rate():
     plt.close(fig)
 
 
+def plot_serving_throughput():
+    # HF figure is the tqdm-observed wall clock (~6.65s/it * 100) -- that run
+    # predates the timing instrumentation added in Decision 029, so it's an
+    # approximation, not a precise measurement like the vLLM figure.
+    labels = ["HF Transformers\n(sequential)", "vLLM\n(batched)"]
+    seconds = [664, 3.3]
+    colors = ["#d62728", "#1f77b4"]
+
+    fig, ax = plt.subplots(figsize=(6, 4.5))
+    bars = ax.bar(labels, seconds, color=colors)
+    ax.set_yscale("log")
+
+    for bar, s in zip(bars, seconds):
+        label = f"{s:.0f}s (~{s / 60:.0f} min)" if s > 60 else f"{s:.1f}s"
+        ax.text(bar.get_x() + bar.get_width() / 2, s * 1.15, label, ha="center", fontweight="bold")
+
+    ax.set_ylabel("Wall clock, log scale (100 GSM8K examples)")
+    ax.set_title("Serving throughput: same DPO adapter, same task (~200x)")
+    ax.set_ylim(1, 3000)
+    fig.tight_layout()
+    fig.savefig(f"{OUTPUT_DIR}/serving_throughput.png", dpi=150)
+    plt.close(fig)
+
+
 def main():
     import os
 
@@ -110,8 +134,9 @@ def main():
     plot_accuracy_progression()
     plot_failure_types()
     plot_judge_win_rate()
+    plot_serving_throughput()
 
-    print(f"Saved 3 charts to {OUTPUT_DIR}/")
+    print(f"Saved 4 charts to {OUTPUT_DIR}/")
 
 
 if __name__ == "__main__":
