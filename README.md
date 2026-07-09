@@ -320,6 +320,12 @@ The DPO adapter was continued from a specific SFT adapter -- its own eval accura
 
 A real, controlled **+19-point** improvement (0.32 -> 0.51), on *both* fronts: `wrong_numeric_answer` dropped 49 -> 36 (fixed genuine close-but-wrong reasoning) and `no_numeric_answer` dropped 17 -> 10 (fewer degenerate-loop generations too). See `DECISIONS.md` (Decision 022) for the full detail, including a training-dynamics note: unlike every SFT run, `eval_loss` decreased monotonically across all 3 epochs with no overfitting.
 
+![GSM8K accuracy across the post-training arc](docs/plots/accuracy_progression.png)
+
+![Failure-type breakdown across the post-training arc](docs/plots/failure_types.png)
+
+*(Charts include GRPO, covered below -- regenerate with `PYTHONPATH=src python scripts/plot_results.py`.)*
+
 ### Next Step
 
 The core post-training arc (baseline -> SFT -> DPO, 0.03 -> 0.32 -> 0.51) is complete and documented end to end. Next: LLM-as-judge evaluation (below).
@@ -346,6 +352,8 @@ Judge model is Claude Opus 4.8 by default (`--model` to override) -- see `DECISI
 | SFT+DPO | 13 | 43.3% |
 | SFT | 5 | 16.7% |
 | tie | 12 | 40.0% |
+
+![LLM-as-judge win rate: SFT vs SFT+DPO](docs/plots/judge_win_rate.png)
 
 Confirms the exact-match accuracy gain (0.32 -> 0.51) qualitatively: DPO wins on reasoning quality far more often than it loses, judged independently of whether the final number happens to match. See `DECISIONS.md` (Decision 025).
 

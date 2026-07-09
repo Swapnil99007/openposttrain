@@ -69,3 +69,4 @@ peft
 trl
 anthropic
 vllm
+matplotlib
