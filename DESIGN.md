@@ -511,4 +511,22 @@ First-pass config v1 (500 train prompts, `lr=1e-6`, 1 epoch) trained cleanly (st
 
 ### Next Design Step
 
-GRPO stage concluded. Next candidates: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation.
+GRPO stage concluded. Next: serving/inference comparison (below).
+
+## Serving/Inference Comparison (vLLM)
+
+Files:
+
+- `src/openposttrain/serving/vllm_eval.py` -- `run_gsm8k_eval_vllm()`: same GSM8K task and scoring functions as `evals/gsm8k.py`, but batches all prompts into a single `llm.generate()` call instead of a sequential loop.
+- `scripts/run_eval_vllm.py` -- CLI, config-driven like `run_eval.py`, loads the base model + LoRA adapter via vLLM's `enable_lora=True` + `LoRARequest`.
+- `scripts/run_eval.py` -- also updated with timing/token-count instrumentation so the HF backend reports comparable `wall_clock_seconds`/`tokens_per_second` metrics.
+
+Purpose: a different competency than the training stages -- production serving performance and correctness, directly named in Anthropic's Performance Engineer, Inference Systems posting. Reuses the exact same evaluator as every other stage so any accuracy difference between backends is a real finding, not just a speed benchmark. See Decision 029 for full design reasoning.
+
+### Result
+
+vLLM: ~250x faster wall-clock (single batched call vs. sequential HF loop) -- the expected result. Unexpectedly, also +14 points accuracy (0.51 -> 0.65), traced to vLLM's kernel path being measurably more robust against a known degenerate-repetition failure mode (Decision 021) than HF Transformers' default generation path, not a bug or noise -- verified by diffing all 100 completions and inspecting specific disagreements. Full analysis in Decision 030.
+
+### Next Design Step
+
+Both findings documented as final for this stage.

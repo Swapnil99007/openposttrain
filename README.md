@@ -359,7 +359,7 @@ Confirms the exact-match accuracy gain (0.32 -> 0.51) qualitatively: DPO wins on
 
 ### Next Step
 
-Consider serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation to push GSM8K accuracy further.
+Continue to GRPO (below), then the serving/inference comparison further down.
 
 ## GRPO (RL)
 
@@ -379,3 +379,26 @@ Two configs tried -- v1 (conservative: `lr=1e-6`, 1 epoch) and v2 (`lr=1e-5`, 3 
 | Base + SFT + DPO + GRPO v2 | 52 | 11 | 1 | 36 | 0.52 |
 
 v1's +1 point is within the ~5-point run-to-run noise already established for this eval (see DPO's non-determinism finding above) -- statistically flat, not an improvement. v2 (10x the learning rate, 3x the epochs) landed on the **exact same failure-type breakdown as v1**, despite genuinely more policy movement during training (KL an order of magnitude larger, in-training validation reward climbing to 0.58 vs. v1's 0.52) -- that extra movement didn't transfer to the held-out benchmark at all. Read together, these two runs are stronger evidence of a real plateau than either alone: training itself works correctly end-to-end (the online generate-grade-update loop, stable reward/KL, no collapse in either run) -- this DPO-then-GRPO recipe just isn't moving this particular eval further within the LR/epoch range tried. Full analysis in `DECISIONS.md` (Decisions 027-028).
+
+## Serving/Inference Comparison (vLLM vs. HF Transformers)
+
+A different competency than the training stages above: how the same trained adapter behaves under a production-oriented serving stack instead of the naive HF Transformers loop used for every eval so far.
+
+    PYTHONPATH=src python scripts/run_eval_vllm.py --config configs/eval_gsm8k_qwen2_5_1_5b_base_dpo_vllm.yaml
+
+### Result
+
+Same DPO adapter, same 100 GSM8K test questions, same greedy-decoding parameters, same evaluator:
+
+| Backend | Accuracy | Wall clock (100 examples) |
+|---|---:|---:|
+| HF Transformers (sequential) | 0.51 | ~11 min |
+| vLLM (single batched call) | 0.65 | ~3 sec |
+
+**Throughput**: ~250x, the expected result of continuous batching vs. a one-request-at-a-time loop.
+
+**Accuracy**: the +14-point gap was not expected, and is well outside this eval's established ~5-point noise band. Investigated rather than reported at face value -- ruled out a tokenizer mismatch (real bug, fixed, didn't change the result), then diffed all 100 completions between backends. Finding: vLLM produced zero degenerate/malformed completions on this eval, while HF Transformers produced 13 (including the exact repetition-loop failure mode from the base-model SFT track above -- e.g. one HF completion was the token `afone` repeated ~90 times, where vLLM's completion for the identical question was a clean, correct solution). Where vLLM *was* wrong, it was a genuine reasoning slip, not garbage. Same weights, same LoRA adapter, same greedy decoding -- but different attention/LoRA kernels between the two backends produce numerically different logits, and greedy decoding's autoregressive nature means any early divergence cascades through the whole completion. This is the same non-determinism principle as the GPU training finding above, now shown to apply at inference time between serving stacks too. Full analysis in `DECISIONS.md` (Decisions 029-030).
+
+### Next Step
+
+Both findings (throughput and correctness) are documented as final for this stage.

@@ -124,7 +124,24 @@ Ran twice on RunPod (several environment issues along the way both times -- nump
 
 Two independently-tuned configs converging on an identical result is stronger evidence of a real plateau than either alone. The online generate-grade-update loop itself works correctly end to end (the actual capability gap this stage set out to demonstrate) -- this particular recipe (500 GSM8K prompts, exact-match + format reward, continuing an already-strong DPO policy) just isn't moving this eval further within the LR/epoch range tried. Concluded the stage here rather than run a v3. Full detail in `DECISIONS.md` Decisions 026-028.
 
+## Stage 21: Serving/Inference Comparison (vLLM vs. HF Transformers) -- done (Decisions 029-030)
+
+A different competency than the training stages: how the DPO adapter performs under a production-oriented serving stack (vLLM) vs. the naive HF Transformers loop used for every eval so far, directly relevant to Anthropic's Performance Engineer, Inference Systems posting.
+
+Same 100 GSM8K test questions, same adapter, same greedy-decoding params, same evaluator, through both backends:
+
+| Backend | Accuracy | Wall clock |
+|---|---:|---:|
+| HF Transformers | 0.51 | ~11 min |
+| vLLM | 0.65 | ~3 sec |
+
+**Throughput**: ~250x, expected (continuous batching vs. sequential loop).
+
+**Accuracy**: +14 points, unexpected and outside the established noise band -- investigated rather than accepted at face value. Ruled out a tokenizer-loading bug (real, fixed, didn't change the result). Root cause found by diffing all 100 completions: vLLM produced zero degenerate/malformed completions, HF produced 13 (including the exact repetition-loop failure mode from Decision 021 -- one HF completion was the token `afone` repeated ~90 times where vLLM answered the same question correctly). Where vLLM was wrong, it was a genuine reasoning slip, not garbage. Conclusion: identical weights/adapter/decoding params, but different attention/LoRA kernels between backends produce numerically different logits, and greedy decoding's autoregressive nature means any early divergence cascades through the whole completion -- the same non-determinism principle as the GPU training finding (Decision 024), now shown to apply at inference time too. Full detail in `DECISIONS.md` Decisions 029-030.
+
+Also added `scripts/plot_results.py` this session -- three charts (accuracy progression, failure-type breakdown, LLM-judge win rate) embedded directly in README.md so the project's results are legible without reading markdown tables.
+
 ## Next Step
-GRPO stage concluded. Move to a different next stage: serving/inference comparison (vLLM/TensorRT-LLM), or synthetic/self-distilled data generation.
+The full arc is done: baseline -> SFT -> DPO -> GRPO -> serving comparison, each stage's findings honestly documented including two null/unexpected results (GRPO's plateau, vLLM's surprising correctness delta) handled the same rigorous way as the positive results. Remaining optional candidate: synthetic/self-distilled data generation to push GSM8K accuracy further.
 
 Targeted failure-mode SFT data (hand-curated, based on the Qwen failure patterns below) is still a separate, later addition on top of the general GSM8K data.

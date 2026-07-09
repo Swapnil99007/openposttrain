@@ -620,3 +620,28 @@ This project's training-side story (eval design -> SFT -> DPO -> LLM judge -> GR
 
 ### Status
 Code written. Not yet run -- needs vLLM installed and tested on RunPod.
+
+## Decision 030: vLLM result -- ~250x throughput, plus a real (not noise) accuracy difference from generation robustness
+
+### Decision
+Ran the DPO adapter's GSM8K eval (same 100 test-split questions, same greedy-decoding params, same evaluator functions) through vLLM instead of HF Transformers, on the same RunPod GPU.
+
+### Result
+| Backend | Accuracy | Wall clock (100 examples) |
+|---|---:|---:|
+| HF Transformers (sequential, one request at a time) | 0.51 | ~11 min |
+| vLLM (single batched call, all 100 prompts) | 0.65 | ~3 sec |
+
+The throughput gap (~250x) is the expected, unsurprising result -- continuous batching vs. a naive sequential loop is exactly what vLLM is for.
+
+The accuracy gap (0.51 -> 0.65, +14 points) was not expected and is well outside the ~5-point run-to-run noise band already established for this eval (Decision 024). First suspected a methodological bug: vLLM defaulted to the base model's tokenizer instead of the adapter's saved tokenizer (a real gap in the initial script, fixed). The fix didn't move the number (0.64 -> 0.65) -- ruling out tokenizer mismatch as the cause.
+
+Investigated by diffing all 100 questions between the two backends' `results.csv`: 38/100 disagree on correctness. vLLM's failure-type breakdown is 100% `wrong_numeric_answer` (zero `no_numeric_answer`, zero `format_violation`) -- it never produces a degenerate or malformed completion on this eval. HF Transformers does, 13/100 times, including the *exact* repetition-loop failure mode already documented in Decision 021 -- e.g. one HF completion for a question vLLM answers correctly is the token `afone` repeated ~90 times with no reasoning at all. Inspected a case in the other direction too (HF correct, vLLM wrong): vLLM's "wrong" completion has fully correct intermediate arithmetic (3 eggs/day * 7 days * 4 weeks = 84 eggs) but forgets the final eggs-to-dozens conversion -- a genuine reasoning slip, the same character of mistake as any other `wrong_numeric_answer`, not garbage.
+
+### Interpretation
+This is a real, evidence-backed finding: identical model weights, identical LoRA adapter, identical greedy-decoding parameters, but two different serving stacks (different attention kernels -- vLLM's FlashAttention + torch.compile-fused ops vs. HF's default eager/SDPA path; different LoRA application via vLLM's Punica kernels vs. PEFT) produce genuinely different completions token-for-token. Greedy decoding is autoregressive and extremely sensitive to small floating-point differences -- once logits diverge even slightly on an early token, argmax can pick a different token, and the entire rest of the completion diverges from there. This is the same underlying principle as the GPU training non-determinism in Decision 024, now shown to apply at inference time between serving stacks too.
+
+Practical implication: **"same weights, same greedy decoding" does not guarantee "same output" across serving backends.** vLLM's optimized kernel path happens to be measurably more robust against this specific model's known degenerate-repetition failure mode (Decision 021) -- a genuine correctness difference, not just a speed one. This is exactly the kind of check named in Anthropic's Performance Engineer, Inference Systems posting ("own the correctness checks that make sure Claude's outputs are right, not just fast... root-cause a numerical divergence between two hardware platforms").
+
+### Status
+Accepted. Two real findings from one stage: (1) vLLM's batched serving is ~250x faster wall-clock than a naive sequential HF Transformers loop for this workload; (2) vLLM's kernel path is also measurably more robust against a known degenerate-generation failure mode on this model, a real accuracy difference traceable to specific completions rather than an aggregate noise artifact.

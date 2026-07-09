@@ -656,3 +656,27 @@ Two takeaways: (1) the in-training validation reward isn't a reliable stand-in f
 
 ### Status
 Concluding the GRPO stage here rather than running a v3 -- two consistent data points is a more honest result than chasing a third config against a number that's already showing it isn't moving. Final GRPO-stage summary: baseline 0.03 -> SFT 0.32 -> DPO 0.51 -> GRPO 0.52 (within-noise, not a demonstrated further gain). The full post-training arc (baseline -> SFT -> DPO -> GRPO, confirmed for SFT/DPO by LLM judge) is complete and documented. Next candidates: serving/inference comparison, or synthetic/self-distilled data generation.
+
+## 2026-07-09: Result charts added, then vLLM serving comparison
+
+### Charts
+Added `scripts/plot_results.py`, generating three PNGs embedded in README.md: accuracy progression across the post-training arc, failure-type breakdown per stage, and the LLM-judge win-rate. No new data -- visualizes what was already in `DECISIONS.md`, but makes the story legible to anyone skimming the repo rather than requiring them to read markdown tables.
+
+### vLLM setup
+Installed `vllm` on a fresh RunPod pod -- hit a disk-space error mid-install (`flashinfer-cubin`'s precompiled CUDA kernels are large; the container's root disk is only 20GB and was at 85% usage). `pip cache purge` freed 8.5GB and unblocked it. vLLM's own install then pulled in torch 2.11.0+cu130 (CUDA 13), overriding the torch 2.6.0+cu124 set up during the GRPO stage -- but this time `torch.cuda.is_available()` returned `True`, meaning this particular pod's driver actually supports CUDA 13 (RunPod assigns different physical GPUs/drivers pod to pod, so the earlier "driver too old" constraint didn't apply here). Left torch as vLLM installed it rather than reverting, since vLLM's precompiled kernels are built against that exact version.
+
+### Result
+Ran the DPO adapter's GSM8K eval through vLLM instead of HF Transformers -- same 100 questions, same greedy decoding, same evaluator:
+
+| Backend | Accuracy | Wall clock |
+|---|---:|---:|
+| HF Transformers | 0.51 | ~11 min |
+| vLLM | 0.65 | ~3 sec |
+
+The ~250x throughput gain is the expected result. The +14-point accuracy gain was not -- outside the established noise band (Decision 024), so investigated rather than reported at face value. Ruled out a tokenizer mismatch (fixed a real bug -- vLLM defaulted to the base model's tokenizer instead of the adapter's -- but it didn't change the number). Diffed all 100 questions between the two backends: vLLM had zero degenerate/malformed completions (`no_numeric_answer` + `format_violation` = 0), while HF had 13, including the exact repetition-loop failure mode from Decision 021 (one HF completion was the token `afone` repeated ~90 times; vLLM's completion for the same question was a clean correct solution). Where vLLM was wrong, it was a genuine reasoning slip (correct arithmetic, wrong final step), not garbage.
+
+### Interpretation
+Same weights, same LoRA adapter, same greedy-decoding parameters, but two different serving stacks (different attention kernels, different LoRA application) produce genuinely different completions -- greedy decoding is autoregressive and sensitive to tiny floating-point differences that can flip an early token and cascade through the whole generation. Same underlying principle as the GPU training non-determinism in Decision 024, now shown to apply at inference time between serving backends too. Full writeup in `DECISIONS.md` Decision 030.
+
+### Status
+Two real findings documented: vLLM's throughput advantage (expected), and a genuine, evidence-backed correctness difference between serving stacks (not expected, but real once verified) -- exactly the "correctness as part of performance" theme named in Anthropic's Performance Engineer, Inference Systems posting.
