@@ -37,6 +37,11 @@ def main():
 
     llm = LLM(
         model=model_name,
+        # vLLM defaults to the base model's tokenizer for LoRA requests --
+        # point it at the adapter dir instead, matching HFModel's tokenizer
+        # loading (adapter_path takes precedence when present, since
+        # training can save tokenizer-state changes alongside the adapter).
+        tokenizer=adapter_path if adapter_path else model_name,
         enable_lora=adapter_path is not None,
         max_lora_rank=model_config.get("max_lora_rank", 8),
         dtype=model_config.get("dtype", "bfloat16"),
