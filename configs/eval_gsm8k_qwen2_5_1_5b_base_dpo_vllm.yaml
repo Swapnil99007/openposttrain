@@ -1,0 +1,25 @@
+run_name: gsm8k_qwen2_5_1_5b_base_dpo_vllm_512_tokens
+
+# Same model/adapter/task as eval_gsm8k_qwen2_5_1_5b_base_dpo.yaml (the 0.51
+# HF-serving result) -- isolates serving backend as the only variable.
+# max_lora_rank must match the LoRA rank used in training (r=8, see
+# configs/train_sft_qwen2_5_1_5b_base_gsm8k.yaml) so vLLM allocates the
+# right adapter memory.
+model:
+  name: Qwen/Qwen2.5-1.5B
+  adapter_path: outputs/dpo/qwen2_5_1_5b_base_gsm8k_dpo
+  max_lora_rank: 8
+  dtype: bfloat16
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+
+benchmark:
+  name: gsm8k
+  split: test
+  limit: 100
+  prompt_path: prompts/gsm8k_v1.txt
+
+output:
+  base_dir: results
+  leaderboard_path: results/leaderboard.csv

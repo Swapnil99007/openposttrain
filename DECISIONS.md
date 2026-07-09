@@ -602,3 +602,21 @@ Two conclusions, both worth taking at face value rather than explaining away:
 
 ### Status
 Concluding the GRPO stage here rather than running a v3. Two consistent data points (v1, v2) at 0.52 is a more useful, honest result than a third run chasing a number that two independent configs already agree isn't moving. Full GRPO stage summary: baseline 0.03 -> SFT 0.32 -> DPO 0.51 -> GRPO 0.52, with GRPO's contribution honestly reported as within-noise rather than a demonstrated further gain.
+
+## Decision 029: Serving/inference comparison -- vLLM vs. HF Transformers
+
+### Decision
+Add `src/openposttrain/serving/vllm_eval.py` + `scripts/run_eval_vllm.py`: runs the same GSM8K 100-example test-split task, scored with the exact same evaluator functions (`extract_gsm8k_gold`, `extract_model_answer`, `classify_result`) as every other eval in this project, but served through vLLM instead of HF Transformers' `.generate()`. Also added timing/token-count tracking to the existing `scripts/run_eval.py` (HF path) so both backends report comparable `wall_clock_seconds`/`tokens_per_second` metrics.
+
+### Reason
+This project's training-side story (eval design -> SFT -> DPO -> LLM judge -> GRPO) is now complete. Serving/inference is a genuinely different competency -- closer to production ML systems work, and named explicitly in Anthropic's Performance Engineer, Inference Systems posting (throughput, latency, and "correctness as part of performance" across serving configurations). Reusing the exact same evaluator as every other stage means any accuracy difference between the two backends is itself a real finding (a correctness-under-different-serving-stack check), not just a speed benchmark.
+
+### Design
+- **Adapter choice**: the DPO adapter, not GRPO -- GRPO plateaued at an identical result (Decision 028), so DPO is the cleaner "production" adapter to serve.
+- **Batching**: vLLM's whole value proposition is batched/continuous-batched generation, so all 100 prompts go into a single `llm.generate(prompts, sampling_params, lora_request=...)` call, timed as one unit -- not a per-example loop (which would erase the batching advantage and make the comparison meaningless).
+- **LoRA serving**: `LLM(model=base_model, enable_lora=True, max_lora_rank=8)` + `LoRARequest(name, id, adapter_path)` at generate time -- vLLM's documented pattern for serving a LoRA adapter without merging it into the base weights. `max_lora_rank=8` matches the actual LoRA rank used since SFT (Decision unnumbered, `configs/train_sft_qwen2_5_1_5b_base_gsm8k.yaml`), carried through DPO and GRPO by continuation.
+- Sourced the current vLLM LoRA API from vLLM's docs before writing code (same practice as the DPO and GRPO stages) rather than assuming a remembered signature.
+- Known risk, flagged before running: vLLM often pins its own torch/CUDA version, which could reopen the exact class of environment conflict hit twice during the GRPO stage (Decisions 027-028 PROJECT_LOG entries). Noted explicitly rather than assuming a clean install.
+
+### Status
+Code written. Not yet run -- needs vLLM installed and tested on RunPod.

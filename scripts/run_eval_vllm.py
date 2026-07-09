@@ -1,33 +1,24 @@
 import argparse
 import json
 import os
-import time
 from datetime import datetime
 
 import pandas as pd
+from vllm import LLM
+from vllm.lora.request import LoRARequest
 
-from openposttrain.models.hf_model import HFModel
-from openposttrain.evals.gsm8k import run_gsm8k_eval
+from openposttrain.serving.vllm_eval import run_gsm8k_eval_vllm
 from openposttrain.utils.config import load_yaml_config
 from openposttrain.utils.leaderboard import append_to_leaderboard
 from openposttrain.utils.prompts import load_prompt_template
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run LLM evaluation from a YAML config.")
-    parser.add_argument(
-        "--config",
-        required=True,
-        help="Path to evaluation YAML config.",
+    parser = argparse.ArgumentParser(
+        description="Run GSM8K evaluation via vLLM (batched serving comparison)."
     )
+    parser.add_argument("--config", required=True, help="Path to evaluation YAML config.")
     return parser.parse_args()
-
-
-def get_eval_runner(benchmark_name: str):
-    if benchmark_name == "gsm8k":
-        return run_gsm8k_eval
-
-    raise ValueError(f"Unsupported benchmark: {benchmark_name}")
 
 
 def main():
@@ -39,48 +30,37 @@ def main():
     output_config = config["output"]
 
     model_name = model_config["name"]
-    benchmark_name = benchmark_config["name"]
+    adapter_path = model_config.get("adapter_path")
     prompt_path = benchmark_config["prompt_path"]
 
     prompt_template = load_prompt_template(prompt_path)
 
-    model = HFModel(
-        model_name=model_name,
-        device=model_config.get("device", "auto"),
-        adapter_path=model_config.get("adapter_path"),
-        dtype=model_config.get("dtype"),
+    llm = LLM(
+        model=model_name,
+        enable_lora=adapter_path is not None,
+        max_lora_rank=model_config.get("max_lora_rank", 8),
+        dtype=model_config.get("dtype", "bfloat16"),
     )
 
-    eval_runner = get_eval_runner(benchmark_name)
+    lora_request = LoRARequest("adapter", 1, adapter_path) if adapter_path else None
 
-    start = time.perf_counter()
-    eval_output = eval_runner(
-        model=model,
+    eval_output = run_gsm8k_eval_vllm(
+        llm=llm,
         prompt_template=prompt_template,
         split=benchmark_config.get("split", "test"),
         limit=benchmark_config.get("limit"),
-        max_new_tokens=model_config.get("max_new_tokens", 256),
+        max_new_tokens=model_config.get("max_new_tokens", 512),
         temperature=model_config.get("temperature", 0.0),
         top_p=model_config.get("top_p", 1.0),
-        repetition_penalty=model_config.get("repetition_penalty"),
-        no_repeat_ngram_size=model_config.get("no_repeat_ngram_size"),
+        lora_request=lora_request,
     )
-    wall_clock_seconds = time.perf_counter() - start
-
-    # Re-tokenize the already-generated text to count output tokens -- avoids
-    # touching HFModel.generate()'s stable return signature just for this.
-    total_output_tokens = sum(
-        len(model.tokenizer.encode(r.model_answer, add_special_tokens=False))
-        for r in eval_output["results"]
-    )
-    tokens_per_second = total_output_tokens / wall_clock_seconds if wall_clock_seconds > 0 else 0.0
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_name = config.get("run_name", f"{benchmark_name}_{timestamp}")
+    run_name = config.get("run_name", f"gsm8k_vllm_{timestamp}")
 
     output_dir = os.path.join(
         output_config.get("base_dir", "results"),
-        benchmark_name,
+        "gsm8k",
         f"{timestamp}_{run_name}",
     )
     os.makedirs(output_dir, exist_ok=True)
@@ -94,20 +74,18 @@ def main():
         "limit": eval_output["limit"],
         "accuracy": eval_output["accuracy"],
         "num_examples": eval_output["num_examples"],
-        "max_new_tokens": model_config.get("max_new_tokens", 256),
+        "max_new_tokens": model_config.get("max_new_tokens", 512),
         "temperature": model_config.get("temperature", 0.0),
         "top_p": model_config.get("top_p", 1.0),
         "prompt_path": prompt_path,
-        "adapter_path": model_config.get("adapter_path"),
+        "adapter_path": adapter_path,
         "dtype": model_config.get("dtype"),
-        "repetition_penalty": model_config.get("repetition_penalty"),
-        "no_repeat_ngram_size": model_config.get("no_repeat_ngram_size"),
         "config_path": args.config,
         "output_dir": output_dir,
-        "wall_clock_seconds": wall_clock_seconds,
-        "total_output_tokens": total_output_tokens,
-        "tokens_per_second": tokens_per_second,
-        "serving_backend": "huggingface",
+        "wall_clock_seconds": eval_output["wall_clock_seconds"],
+        "total_output_tokens": eval_output["total_output_tokens"],
+        "tokens_per_second": eval_output["tokens_per_second"],
+        "serving_backend": "vllm",
     }
 
     with open(f"{output_dir}/summary.json", "w") as f:
@@ -141,7 +119,7 @@ def main():
         row=summary,
     )
 
-    print("Evaluation complete.")
+    print("vLLM evaluation complete.")
     print(json.dumps(summary, indent=2))
     print(f"Saved results to: {output_dir}")
     print(f"Updated leaderboard: {leaderboard_path}")
